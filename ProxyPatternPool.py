@@ -97,7 +97,7 @@ class Pool:
 
 
 class Proxy:
-    """Proxy patter class.
+    """Proxy pattern class.
 
     The proxy forwards most method calls to the wrapped object, so that
     the reference can be imported even if the object is not created yet.
