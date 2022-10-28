@@ -10,11 +10,35 @@ Generic Proxy and Pool Classes for Python.
 ![Badges](https://img.shields.io/badge/badges-7-informational)
 ![License](https://img.shields.io/pypi/l/proxypatternpool?style=flat)
 
-TODO Badges
+This module provides two classes:
 
-TODO Teaser
+- `Proxy` implements the
+  [proxy pattern](https://en.wikipedia.org/wiki/Proxy_pattern),
+  i.e. all calls to methods on the proxy are forwarded to an internally wrapped
+  object. This allows to solve the classic chicken-and-egg importation and
+  initialization issue with Python objects:
 
-TODO GitHub CI configuration
+  ```python
+  # File "database.py"
+  db = Proxy()
+
+  def init_app(config):
+      db.set(initialization from config)
+  ```
+
+  ```python
+  # File "app.py"
+  import database
+  from database import db  # db is a proxy to nothing
+  …
+  # delayed initialization
+  database.init_app(config)
+
+  # db is now a proxy to the initialized object
+  ```
+
+- `Pool` implements a thread-safe pool of things which can be used to store
+  expensive-to-create objects such as database connections.
 
 ## Documentation
 
@@ -35,3 +59,4 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 - teaser
 - documentation
 - `__enter__` and `__exit__`?
+- ci configuration
