@@ -11,9 +11,7 @@ F.pdf	= $(F.md:%.md=%.pdf)
 # PYTHON	= /snap/bin/pypy3
 # PYTHON	= python3
 PYTHON	= python
-PIP		= venv/bin/pip
-
-PYTEST	= pytest
+PYTEST	= pytest --log-level=debug --capture=tee-sys
 PYTOPT	=
 
 .PHONY: check check.mypy check.flake8 check.black check.pytest check.demo check.coverage check.pymarkdown
@@ -57,12 +55,13 @@ clean.venv: clean
 # for local testing
 venv:
 	$(PYTHON) -m venv venv
-	$(PIP) install -U pip
-	$(PIP) install -e .
-	$(PIP) install -r dev-requirements.txt
+	source venv/bin/activate
+	pip install -U pip
+	pip install -e .
+	pip install -r dev-requirements.txt
 
 $(MODULE).egg-info: venv
-	$(PIP) install -e .
+	pip install -e .
 
 # generate source and built distribution
 dist:

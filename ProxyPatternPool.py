@@ -195,9 +195,9 @@ class Proxy:
         if self._mode == Proxy.Mode.THREAD:
             self._local = threading.local()
         else:  # Proxy.Mode.VERSATILE
-            import werkzeug
+            from werkzeug.local import Local
 
-            self._local = werkzeug.local.Local()
+            self._local = Local()
         return self
 
     def _set(
