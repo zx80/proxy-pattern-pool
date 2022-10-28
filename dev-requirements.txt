@@ -1,0 +1,8 @@
+wheel
+# tools
+mypy
+flake8
+black
+pytest
+coverage
+pymarkdownlnt
