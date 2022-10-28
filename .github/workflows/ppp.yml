@@ -1,0 +1,45 @@
+name: ProxyPatternPool Package
+
+on:
+  push:
+    branches: [ master ]
+  # push_request: ?
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # broken: pypy3.7
+        # broken: 3.7 (pymarkdownlnt)
+        # TODO 3.12-dev when available
+        python-version: [ "3.8", "3.9", "3.10", "3.11", "pypy3.8", "pypy3.9" ]
+    steps:
+    # Setup
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    # Dependencies
+    - name: Install Python Dependencies
+      run: |
+        pip install -U pip
+        pip install -e .
+        pip install -r dev-requirements.txt
+    # Checks
+    - name: Check with mypy
+      run: mypy ProxyPatternPool.py
+    - name: Check with black
+      run: black --check ProxyPatternPool.py
+    - name: Check with flake8
+      run: flake8 --ignore=E501,F401,E402 ProxyPatternPool.py
+    - name: Check with pytest
+      run: pytest --log-level=debug --capture=tee-sys test.py
+    - name: Check with coverage
+      run: |
+        coverage run -m pytest --log-level=debug --capture=tee-sys test.py
+        coverage report --fail-under=99 --include=ProxyPatternPool.py
+    - name: Check with pymarkdown
+      run: pymarkdown scan *.md

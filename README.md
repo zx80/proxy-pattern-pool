@@ -56,7 +56,5 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 
 ## TODO
 
-- teaser
 - documentation
 - `__enter__` and `__exit__`?
-- ci configuration
