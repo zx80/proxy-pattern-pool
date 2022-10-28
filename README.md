@@ -2,6 +2,8 @@
 
 Generic Proxy and Pool Classes for Python.
 
+TODO Badges
+
 TODO Teaser
 
 ## Documentation
