@@ -1,6 +1,7 @@
 werkzeug
 # install
 wheel
+twine
 # tools
 mypy
 flake8
