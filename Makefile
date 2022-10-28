@@ -48,7 +48,7 @@ check: check.mypy check.pymarkdown check.black check.flake8 check.pytest check.c
 
 .PHONY: clean clean.venv
 clean:
-	$(RM) -r __pycache__ */__pycache__ *.egg-info dist build .mypy_cache .pytest_cache .coverage
+	$(RM) -r __pycache__ */__pycache__ *.egg-info dist build .mypy_cache .pytest_cache .coverage htmlcov
 	$(RM) $(F.pdf)
 
 clean.venv: clean
