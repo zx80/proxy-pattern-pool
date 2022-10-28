@@ -140,7 +140,7 @@ class Proxy:
         max_size: int = 0,
         max_use: int = 0,
         scope: Scope = Scope.AUTO,
-        close: str = None,
+        close: Optional[str] = None,
     ):
         """Constructor parameters:
 
@@ -233,7 +233,7 @@ class Proxy:
     # FIXME how to do that automatically when the thread/whatever ends?
     def _ret_obj(self):
         """Return current wrapped object to internal pool."""
-        if self._pool_max_size is not None:
+        if self._pool_max_size is not None and hasattr(self._local, "obj"):
             self._pool.ret(self._local.obj)
             delattr(self._local, "obj")
         # else just ignore
