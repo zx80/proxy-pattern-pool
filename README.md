@@ -21,3 +21,10 @@ This code is public domain.
 ### 0.1 on 2022-10-28
 
 Initial release with code extracted from `FlaskSimpleAuth`.
+
+## TODO
+
+- badges
+- teaser
+- documentation
+- `__enter__` and `__exit__`?
