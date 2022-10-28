@@ -115,11 +115,11 @@ class Proxy:
     """
 
     class Local(object):
-        """Dumb storage class for shared mode."""
+        """Dumb storage class for shared scope."""
 
         pass
 
-    class Mode(Enum):
+    class Scope(Enum):
         """Granularity of object sharing.
 
         - SHARED: only one object, which should be thread safe.
@@ -139,7 +139,7 @@ class Proxy:
         fun: Optional[Callable] = None,
         max_size: int = 0,
         max_use: int = 0,
-        mode: Mode = Mode.AUTO,
+        scope: Scope = Scope.AUTO,
         close: str = None,
     ):
         """Constructor parameters:
@@ -149,16 +149,16 @@ class Proxy:
         - fun: function to generated a per-thread/or-whatever wrapped object.
         - max_size: pool maximum size, 0 for unlimited, None for no pooling.
         - max_use: when pooling, how many times to reuse an object.
-        - mode: level of sharing, default is to chose between SHARED and THREAD.
+        - scope: level of sharing, default is to chose between SHARED and THREAD.
         - close: "close" method, if any.
         """
-        # mode encodes the expected object unicity or multiplicity
-        self._mode = (
-            Proxy.Mode.SHARED
-            if mode == Proxy.Mode.AUTO and obj
-            else Proxy.Mode.THREAD
-            if mode == Proxy.Mode.AUTO and fun
-            else mode
+        # scope encodes the expected object unicity or multiplicity
+        self._scope = (
+            Proxy.Scope.SHARED
+            if scope == Proxy.Scope.AUTO and obj
+            else Proxy.Scope.THREAD
+            if scope == Proxy.Scope.AUTO and fun
+            else scope
         )
         self._pool_max_size = max_size
         self._pool_max_use = max_use
@@ -172,7 +172,7 @@ class Proxy:
     def _set_obj(self, obj):
         """Set current wrapped object."""
         log.debug(f"Setting proxy to {obj} ({type(obj)})")
-        self._mode = Proxy.Mode.SHARED
+        self._scope = Proxy.Scope.SHARED
         self._fun = None
         self._pool = None
         self._nobjs = 1
@@ -182,9 +182,9 @@ class Proxy:
 
     def _set_fun(self, fun: Callable[[int], Any]):
         """Set current wrapped object generation function."""
-        if self._mode == Proxy.Mode.AUTO:
-            self._mode = Proxy.Mode.THREAD
-        assert self._mode in (Proxy.Mode.THREAD, Proxy.Mode.VERSATILE)
+        if self._scope == Proxy.Scope.AUTO:
+            self._scope = Proxy.Scope.THREAD
+        assert self._scope in (Proxy.Scope.THREAD, Proxy.Scope.VERSATILE)
         self._fun = fun
         self._pool = (
             Pool(fun, self._pool_max_size, self._pool_max_use, close=self._close)
@@ -192,9 +192,9 @@ class Proxy:
             else None
         )
         self._nobjs = 0
-        if self._mode == Proxy.Mode.THREAD:
+        if self._scope == Proxy.Scope.THREAD:
             self._local = threading.local()
-        else:  # Proxy.Mode.VERSATILE
+        else:  # Proxy.Scope.VERSATILE
             from werkzeug.local import Local
 
             self._local = Local()

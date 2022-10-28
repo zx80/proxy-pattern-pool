@@ -65,7 +65,7 @@ def test_proxy():
     r._set_fun(lambda i: i)
     assert str(r) == "0"
     # versatile
-    r = ppp.Proxy(mode=ppp.Proxy.Mode.VERSATILE)
+    r = ppp.Proxy(scope=ppp.Proxy.Scope.VERSATILE)
     r._set_fun(lambda i: i+10)
     assert str(r) == "10"
 
