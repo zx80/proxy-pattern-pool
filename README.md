@@ -2,6 +2,14 @@
 
 Generic Proxy and Pool Classes for Python.
 
+![Status](https://github.com/zx80/proxy-pattern-pool/actions/workflows/fsa.yml/badge.svg?branch=master&style=flat)
+![Tests](https://img.shields.io/badge/tests-3%20✓-success)
+![Coverage](https://img.shields.io/badge/coverage-100%25-success)
+![Python](https://img.shields.io/badge/python-3-informational)
+![Version](https://img.shields.io/pypi/v/ProxyPatternPool)
+![Badges](https://img.shields.io/badge/badges-7-informational)
+![License](https://img.shields.io/pypi/l/proxypatternpool?style=flat)
+
 TODO Badges
 
 TODO Teaser
@@ -24,7 +32,6 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 
 ## TODO
 
-- badges
 - teaser
 - documentation
 - `__enter__` and `__exit__`?
