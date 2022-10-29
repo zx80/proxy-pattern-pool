@@ -24,7 +24,7 @@ This module provides two classes:
   db = Proxy()
 
   def init_app(config):
-      db.set(initialization from config)
+      db.set_obj(initialization from config)
   ```
 
   ```python
