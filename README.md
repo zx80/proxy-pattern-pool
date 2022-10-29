@@ -98,7 +98,7 @@ First, a shared module holds a proxy to a yet unknown object:
 from ProxyPatternPool import Proxy 
 stuff = Proxy()
 def init_app(stuff):
-    shared.set_obj(stuff)
+    stuff.set_obj(stuff)
 ```
 
 This shared object is used by module with a blueprint:
