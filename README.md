@@ -16,7 +16,7 @@ This module provides two classes:
   [proxy pattern](https://en.wikipedia.org/wiki/Proxy_pattern),
   i.e. all calls to methods on the proxy are forwarded to an internally wrapped
   object. This allows to solve the classic chicken-and-egg importation and
-  initialization issue with Python objects:
+  initialization possibly circular-dependency issue with Python modules:
 
   ```python
   # File "database.py"
