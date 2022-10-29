@@ -130,7 +130,7 @@ Shared.init_app("hello world!")
 
 ## License
 
-This code is public domain.
+This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/).
 
 ## Versions
 
