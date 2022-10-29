@@ -25,6 +25,9 @@ def test_proxy():
     assert r3 == "1" and r3 != "one"
     assert r3.isdigit()
     assert repr("1") == repr(r3)
+
+
+def test_proxy_threads():
     # thread local stuff
     def gen_data(i):
         return f"data: {i}"
@@ -88,6 +91,11 @@ def test_proxy_pool():
     assert len(ref._pool._avail) == 1
     assert len(ref._pool._using) == 0
     assert ref._pool._nobjs == 1
+    del ref
+
+
+def test_proxy_pool_thread():
+    ref = ppp.Proxy(fun=lambda i: i, max_size=2)
     # test with 2 ordered threads to grasp to objects from the pool
     import threading
     event = threading.Event()
@@ -107,27 +115,33 @@ def test_proxy_pool():
     t2.start()
     t1.join()
     t2.join()
+    del t1
+    del t2
     # use a 3rd reference to raise an pool max size exception
     try:
         ref._get_obj()   # failed attempt at generating #2
         assert False, "must reach max_size"
     except Exception as e:
         assert "pool max size reached" in str(e)
+    del ref
 
 
 def test_pool():
     # test max_use
-    p1 = ppp.Pool(fun = lambda i: i, max_size = 1, max_use = 2)
-    i = p1.get()
+    pool = ppp.Pool(fun = lambda i: i, max_size = 1, max_use = 2)
+    i = pool.get()
     assert i == 0
-    p1.ret(i)
-    i = p1.get()
+    pool.ret(i)
+    i = pool.get()
     assert i == 0
-    p1.ret(i)
-    i = p1.get()
+    pool.ret(i)
+    i = pool.get()
     assert i == 1
-    p1.ret(i)
-    p1.__delete__()
+    pool.ret(i)
+    pool.__delete__()
+
+
+def test_pool_class():
     # test with close and None
     class T:
         def __init__(self, count):
@@ -137,11 +151,11 @@ def test_pool():
             raise Exception("Oops!")
         def __str__(self):
             return f"T({self._count})"
-    p2 = ppp.Pool(fun = T, max_size = None, max_use = 1, close="close")
-    t = p2.get()
+    pool = ppp.Pool(fun = T, max_size = None, max_use = 1, close="close")
+    t = pool.get()
     assert str(t) == "T(0)"
-    p2.ret(t)
-    t = p2.get()
+    pool.ret(t)
+    t = pool.get()
     assert str(t) == "T(1)"
-    p2.ret(t)
-    p2.__delete__()
+    pool.ret(t)
+    pool.__delete__()
