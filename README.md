@@ -44,7 +44,7 @@ This module provides two classes:
 ## Documentation
 
 The `Proxy` class manages accesses to one or more objects, possibly using
-a `Pool`, depending on the expected scope of objects.
+a `Pool`, depending on the expected scope of said objects.
 
 The `Proxy` constructors expects the following parameters:
 
@@ -60,7 +60,8 @@ The `Proxy` constructors expects the following parameters:
 - `set_name` the name of a function to set the proxy contents,
   default is `set`. This parameter allows to avoid collisions with
   the proxied methods.
-  It is used as a prefix to have `set_obj` and `set_fun` functions.
+  It is used as a prefix to have `set_obj` and `set_fun` functions
+  which allow to reset the internal `obj` or `fun`.
 - `max_size` maximum size of pool of objects kept.
   *None* means no pooling, *0* means unlimited pool size (the default).
 - `max_use` how many times an object should be reused.
@@ -71,6 +72,7 @@ The `Proxy` constructors expects the following parameters:
 When `max_size` is not *None*, a `Pool` is created to store the created
 objects so as to reuse them. It is the responsability of the user to
 return the object when not needed anymore by calling `_ret_obj` explicitely.
+This is useful for code which keeps creating new threads, eg `werkzeug`.
 For a database connection, a good time to do that is just after a `commit`.
 
 The `Pool` class manage a pool of objects in a thread-safe way.
@@ -82,6 +84,49 @@ Its constructor expects the following parameters:
 - `close` method to call when discarding an object, default is *None*.
 
 Objects are created on demand by calling `fun` when needed.
+
+## Example
+
+Here is an example of a flask application with blueprints and a shared
+resource.
+
+First, a shared module holds a proxy to a yet unknown object:
+
+```Python
+# file "Shared.py"
+from ProxyPatternPool import Proxy 
+stuff = Proxy()
+def init_app(stuff):
+    shared.set_obj(stuff)
+```
+
+This shared object is used by module with a blueprint:
+
+```Python
+# file "SubStuff.py"
+from Flask import Blueprint
+from Shared import stuff
+sub = Blueprint(…)
+
+@sub.get("/stuff)
+def get_stuff():
+    return str(stuff), 200
+```
+
+Then the application itself can load and initialize both modules in any order
+without risk of having some unitialized stuff imported:
+
+```Python
+# file "App.py"
+from flask import Flask
+app = Flask("stuff")
+
+from SubStuff import sub
+app.register_blueprint(sub, url_prefix="/sub")
+
+import Shared
+Shared.init_app("hello world!")
+```
 
 ## License
 
