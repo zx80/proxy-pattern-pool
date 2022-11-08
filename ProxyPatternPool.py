@@ -154,12 +154,9 @@ class Proxy:
         """
         # scope encodes the expected object unicity or multiplicity
         self._scope = (
-            Proxy.Scope.SHARED
-            if scope == Proxy.Scope.AUTO and obj
-            else Proxy.Scope.THREAD
-            if scope == Proxy.Scope.AUTO and fun
-            else scope
-        )
+            Proxy.Scope.SHARED if scope == Proxy.Scope.AUTO and obj else
+            Proxy.Scope.THREAD if scope == Proxy.Scope.AUTO and fun else
+            scope)  # fmt: skip
         self._pool_max_size = max_size
         self._pool_max_use = max_use
         self._close = close
@@ -186,11 +183,8 @@ class Proxy:
             self._scope = Proxy.Scope.THREAD
         assert self._scope in (Proxy.Scope.THREAD, Proxy.Scope.VERSATILE)
         self._fun = fun
-        self._pool = (
-            Pool(fun, self._pool_max_size, self._pool_max_use, close=self._close)
-            if self._pool_max_size is not None
-            else None
-        )
+        self._pool = Pool(fun, self._pool_max_size, self._pool_max_use, close=self._close) \
+            if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0
         if self._scope == Proxy.Scope.THREAD:
             self._local = threading.local()
