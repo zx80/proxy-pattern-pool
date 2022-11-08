@@ -32,7 +32,7 @@ class Pool:
         fun: Callable[[int], Any],
         max_size: int = 0,
         max_use: int = 0,
-        close: str = None,
+        close: Optional[str] = None,
     ):
         self._lock = threading.RLock()
         self._fun = fun
