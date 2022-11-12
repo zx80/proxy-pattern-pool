@@ -135,6 +135,12 @@ This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/)
 
 ## Versions
 
+### 1.1 on 2022-11-12
+
+Minor fixes for `mypy`.
+Test with Python *3.12*.
+Improved documentation.
+
 ### 1.0 on 2022-10-29
 
 Add some documentation.
