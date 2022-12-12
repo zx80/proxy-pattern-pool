@@ -109,7 +109,7 @@ from Flask import Blueprint
 from Shared import stuff
 sub = Blueprint(…)
 
-@sub.get("/stuff)
+@sub.get("/stuff")
 def get_stuff():
     return str(stuff), 200
 ```
