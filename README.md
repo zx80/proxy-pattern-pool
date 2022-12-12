@@ -93,7 +93,7 @@ resource.
 
 First, a shared module holds a proxy to a yet unknown object:
 
-```Python
+```python
 # file "Shared.py"
 from ProxyPatternPool import Proxy 
 stuff = Proxy()
@@ -103,7 +103,7 @@ def init_app(stuff):
 
 This shared object is used by module with a blueprint:
 
-```Python
+```python
 # file "SubStuff.py"
 from Flask import Blueprint
 from Shared import stuff
@@ -117,7 +117,7 @@ def get_stuff():
 Then the application itself can load and initialize both modules in any order
 without risk of having some unitialized stuff imported:
 
-```Python
+```python
 # file "App.py"
 from flask import Flask
 app = Flask("stuff")
@@ -134,6 +134,13 @@ Shared.init_app("hello world!")
 This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/).
 
 ## Versions
+
+[Sources](https://github.com/zx80/proxy-pattern-pool),
+[documentation](https://zx80.github.io/proxy-pattern-pool/) and
+[issues](https://github.com/zx80/proxy-pattern-pool/issues)
+are hosted on [GitHub](https://github.com).
+Install [package](https://pypi.org/project/ProxyPatternPool/) from
+[PyPI](https://pypi.org/).
 
 ### 1.1 on 2022-11-12
 
