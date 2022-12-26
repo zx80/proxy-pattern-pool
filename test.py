@@ -163,13 +163,14 @@ def test_pool_class():
     pool.__delete__()
 
 def test_pool_delay():
-    pool = ppp.Pool(fun = lambda n: n, max_size = 0, max_delay = 0.5)
+    pool = ppp.Pool(fun = lambda n: n, max_size = 0, max_delay = 0.4)
     t1, t2 = pool.get(), pool.get()
     assert pool._nobjs == 2 and pool._nuses == 2
     pool.ret(t1)
     pool.ret(t2)
     assert pool._nobjs == 2
-    time.sleep(1.5)
+    # allow several rounds…
+    time.sleep(1.7)
     assert pool._nobjs == 1
     t1, t2 = pool.get(), pool.get()
     assert pool._nobjs == 2 and pool._nuses == 4
