@@ -6,11 +6,11 @@ This code is public domain.
 
 from typing import Optional, Callable, Dict, Set, Any
 from enum import Enum
-import threading  # for Local and Lock
-
+from dataclasses import dataclass
+import threading
+import datetime
+import time
 import logging
-
-log = logging.getLogger("ppp")
 
 # get module version
 import pkg_resources as pkg  # type: ignore
@@ -18,47 +18,85 @@ import pkg_resources as pkg  # type: ignore
 __version__ = pkg.require("ProxyPatternPool")[0].version
 
 
+log = logging.getLogger("ppp")
+
+
 class Pool:
     """Thread-safe pool of something, created on demand.
 
     - fun: function to create objects on demand, called with the creation number.
-    - max_size: maximum size of the pool, 0 for unlimited.
+    - max_size: maximum size of pool, 0 for unlimited.
+    - min_size: minimum size of pool.
     - max_use: how many times to use a something, 0 for unlimited.
+    - max_delay: remove objects if unused, 0.0 for unlimited.
     - close: name of "close" method to call, if any.
     """
+
+    @dataclass
+    class UseInfo:
+        uses: int
+        last: float
 
     def __init__(
         self,
         fun: Callable[[int], Any],
         max_size: int = 0,
         max_use: int = 0,
+        min_size: int = 1,
+        max_delay: float = 0.0,
         close: Optional[str] = None,
     ):
         self._lock = threading.RLock()
         self._fun = fun
         self._nobjs = 0
+        self._nuses = 0
         self._ncreated = 0
         self._max_size = max_size
+        self._min_size = min_size
         self._max_use = max_use
+        self._max_delay = max_delay
         self._close = close
         # pool's content: available vs in use objects
         self._avail: Set[Any] = set()
         self._using: Set[Any] = set()
-        # keep track of usage
-        self._uses: Dict[Any, int] = dict()
+        # keep track of usage count and last return
+        self._uses: Dict[Any, Pool.UseInfo] = dict()
+        self._housekeeper: Optional[threading.Thread] = None
+        if self._max_delay:
+            self._housekeeper = threading.Thread(target=self._houseKeeping, daemon=True)
+            self._housekeeper.start()
+
+    def __str__(self):
+        o, u, a, i = self._nobjs, self._nuses, len(self._avail), len(self._using)
+        return f"o={o} u={u} a={a} i={i}"
+
+    def _now(self) -> float:
+        return datetime.datetime.timestamp(datetime.datetime.now())
+
+    def _houseKeeping(self):
+        """Housekeeping thread."""
+        log.warning(f"housekeeper running every {self._max_delay}")
+        while True:
+            time.sleep(self._max_delay)
+            log.debug(str(self))
+            if self._nobjs <= self._min_size:
+                continue
+            with self._lock:
+                now = self._now()
+                for obj in list(self._avail):
+                    if now - self._uses[obj].last >= self._max_delay:
+                        self._del(obj)
+                        if self._nobjs <= self._min_size:
+                            break
 
     def __delete__(self):
         """This should be done automatically, but eventually."""
         with self._lock:
             self._using.clear()
             self._uses.clear()
+            # FIXME what about _using?
             for obj in list(self._avail):
-                if self._close and hasattr(obj, self._close):  # pragma: no cover
-                    try:
-                        getattr(obj, self._close)()
-                    except Exception:
-                        pass
-                del obj
+                self._del(obj)
             self._avail.clear()
 
     def get(self):
@@ -67,7 +105,8 @@ class Pool:
             try:
                 obj = self._avail.pop()
                 self._using.add(obj)
-                self._uses[obj] += 1
+                self._nuses += 1
+                self._uses[obj].uses += 1
             except KeyError:  # nothing available
                 if self._max_size and self._nobjs >= self._max_size:
                     raise Exception(f"object pool max size reached ({self._max_size})")
@@ -75,24 +114,35 @@ class Pool:
                 obj = self._fun(self._ncreated)
                 self._ncreated += 1
                 self._nobjs += 1
+                self._nuses += 1
                 self._using.add(obj)
-                self._uses[obj] = 1
+                self._uses[obj] = Pool.UseInfo(1, self._now())
             return obj
+
+    def _del(self, obj):
+        """Destroy this object."""
+        if self._close and hasattr(obj, self._close):
+            try:
+                getattr(obj, self._close)()
+            except Exception as e:
+                log.warning(f"exception on {self._close}(): {e}")
+        if obj in self._uses:
+            del self._uses[obj]
+        if obj in self._avail:
+            self._avail.remove(obj)
+        if obj in self._using:  # pragma: no cover
+            self._using.remove(obj)
+        del obj
+        self._nobjs -= 1
 
     def ret(self, obj):
         """Return object to pool."""
         with self._lock:
             self._using.remove(obj)
-            if self._max_use and self._uses[obj] >= self._max_use:
-                if self._close and hasattr(obj, self._close):
-                    try:
-                        getattr(obj, self._close)()
-                    except Exception as e:
-                        log.warning(f"exception occured on {self._close}(): {e}")
-                del self._uses[obj]
-                del obj
-                self._nobjs -= 1
+            if self._max_use and self._uses[obj].uses >= self._max_use:
+                self._del(obj)
             else:
+                self._uses[obj].last = self._now()
                 self._avail.add(obj)
 
 
@@ -139,6 +189,7 @@ class Proxy:
         fun: Optional[Callable] = None,
         max_size: int = 0,
         max_use: int = 0,
+        max_delay: float = 0.0,
         scope: Scope = Scope.AUTO,
         close: Optional[str] = None,
     ):
@@ -149,6 +200,7 @@ class Proxy:
         - fun: function to generated a per-thread/or-whatever wrapped object.
         - max_size: pool maximum size, 0 for unlimited, None for no pooling.
         - max_use: when pooling, how many times to reuse an object.
+        - max_delay: when pooling, when to discard an unused object.
         - scope: level of sharing, default is to chose between SHARED and THREAD.
         - close: "close" method, if any.
         """
@@ -159,6 +211,7 @@ class Proxy:
             scope)  # fmt: skip
         self._pool_max_size = max_size
         self._pool_max_use = max_use
+        self._pool_max_delay = max_delay
         self._close = close
         self._set(obj=obj, fun=fun, mandatory=False)
         if set_name and set_name != "_set":
@@ -183,8 +236,10 @@ class Proxy:
             self._scope = Proxy.Scope.THREAD
         assert self._scope in (Proxy.Scope.THREAD, Proxy.Scope.VERSATILE)
         self._fun = fun
-        self._pool = Pool(fun, self._pool_max_size, self._pool_max_use, close=self._close) \
-            if self._pool_max_size is not None else None  # fmt: skip
+        self._pool = \
+            Pool(fun, self._pool_max_size, self._pool_max_use,
+                 max_delay=self._pool_max_delay, close=self._close) \
+                if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0
         if self._scope == Proxy.Scope.THREAD:
             self._local = threading.local()

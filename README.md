@@ -3,7 +3,7 @@
 Generic Proxy and Pool Classes for Python.
 
 ![Status](https://github.com/zx80/proxy-pattern-pool/actions/workflows/ppp.yml/badge.svg?branch=main&style=flat)
-![Tests](https://img.shields.io/badge/tests-6%20✓-success)
+![Tests](https://img.shields.io/badge/tests-7%20✓-success)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-success)
 ![Issues](https://img.shields.io/github/issues/zx80/proxy-pattern-pool?style=flat)
 ![Python](https://img.shields.io/badge/python-3-informational)
@@ -67,6 +67,8 @@ The `Proxy` constructors expects the following parameters:
   *None* means no pooling, *0* means unlimited pool size (the default).
 - `max_use` how many times an object should be reused.
   default is *0* which means unlimited.
+- `max_delay` after which unused objects are discarded.
+  default is *0.0* which means unlimited.
 - `close` name of the function to call when discarding an object,
   default is *None* means nothing is called.
 
@@ -80,8 +82,10 @@ The `Pool` class manage a pool of objects in a thread-safe way.
 Its constructor expects the following parameters:
 
 - `fun` how to create a new object; the function is passed the creation number.
-- `max_size` size of pool, *0* for unlimited.
+- `max_size` maximum size of pool, *0* for unlimited.
 - `max_use` after how many usage to discard an object.
+- `min_size` minimum size of pool.
+- `max_delay` when to discard an unused object.
 - `close` method to call when discarding an object, default is *None*.
 
 Objects are created on demand by calling `fun` when needed.
@@ -141,6 +145,10 @@ This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/)
 are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
+
+### 2.0 on ?
+
+Add min size and max delay feature to `Pool`.
 
 ### 1.1 on 2022-11-12
 

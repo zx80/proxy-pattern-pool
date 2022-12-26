@@ -1,5 +1,6 @@
-import pytest
+import time
 import threading
+import pytest
 import ProxyPatternPool as ppp
 
 import logging
@@ -151,6 +152,7 @@ def test_pool_class():
             raise Exception("Oops!")
         def __str__(self):
             return f"T({self._count})"
+    # basic
     pool = ppp.Pool(fun = T, max_size = None, max_use = 1, close="close")
     t = pool.get()
     assert str(t) == "T(0)"
@@ -158,4 +160,19 @@ def test_pool_class():
     t = pool.get()
     assert str(t) == "T(1)"
     pool.ret(t)
+    pool.__delete__()
+
+def test_pool_delay():
+    pool = ppp.Pool(fun = lambda n: n, max_size = 0, max_delay = 0.5)
+    t1, t2 = pool.get(), pool.get()
+    assert pool._nobjs == 2 and pool._nuses == 2
+    pool.ret(t1)
+    pool.ret(t2)
+    assert pool._nobjs == 2
+    time.sleep(1.5)
+    assert pool._nobjs == 1
+    t1, t2 = pool.get(), pool.get()
+    assert pool._nobjs == 2 and pool._nuses == 4
+    pool.ret(t1)
+    pool.ret(t2)
     pool.__delete__()
