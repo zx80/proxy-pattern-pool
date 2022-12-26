@@ -133,6 +133,13 @@ import Shared
 Shared.init_app("hello world!")
 ```
 
+## Note
+
+This module is somehow rhetorical: because of the GIL Python is a quite bad
+a parallel language, so the point of creating threads which will mostly not
+really run in parallel is moot, thus the point of having a clever pool of
+stuff to be shared by these thread is even mooter!
+
 ## License
 
 This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/).
