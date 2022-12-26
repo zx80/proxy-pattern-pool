@@ -33,7 +33,7 @@ jobs:
     - name: Check with black
       run: black --check ProxyPatternPool.py
     - name: Check with flake8
-      run: flake8 --ignore=E501,F401,E402 ProxyPatternPool.py
+      run: flake8 --ignore=E127,E501,F401,E402 ProxyPatternPool.py
     - name: Check with pytest
       run: pytest --log-level=debug --capture=tee-sys test.py
     - name: Check with coverage
