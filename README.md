@@ -146,7 +146,7 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
-### 2.0 on ?
+### 2.0 on 2022-12-26
 
 Add min size and max delay feature to `Pool`.
 
@@ -167,4 +167,3 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 ## TODO
 
 - `__enter__` and `__exit__`?
-- close if unused after a timeout?
