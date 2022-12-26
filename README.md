@@ -159,3 +159,4 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 ## TODO
 
 - `__enter__` and `__exit__`?
+- close if unused after a timeout?
