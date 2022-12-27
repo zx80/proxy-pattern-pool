@@ -63,8 +63,11 @@ The `Proxy` constructors expects the following parameters:
   the proxied methods.
   It is used as a prefix to have `set_obj` and `set_fun` functions
   which allow to reset the internal `obj` or `fun`.
-- `max_size` maximum size of pool of objects kept.
+- `max_size` maximum pool size for objects kept.
   *None* means no pooling, *0* means unlimited pool size (the default).
+- `min_size` minimum pool size.
+  This many is created on startup.
+  Default is *1*.
 - `max_use` how many times an object should be reused.
   default is *0* which means unlimited.
 - `max_delay` after which unused objects are discarded.
@@ -83,8 +86,9 @@ Its constructor expects the following parameters:
 
 - `fun` how to create a new object; the function is passed the creation number.
 - `max_size` maximum size of pool, *0* for unlimited.
-- `max_use` after how many usage to discard an object.
 - `min_size` minimum size of pool.
+- `timeout` maximum time to wait for something.
+- `max_use` after how many usage to discard an object.
 - `max_delay` when to discard an unused object.
 - `close` method to call when discarding an object, default is *None*.
 
@@ -185,5 +189,3 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 ## TODO
 
 - `__enter__` and `__exit__`?
-- add `min_size` parameter to `Proxy`
-- pool should wait instead of erroring on `max_size`

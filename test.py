@@ -4,15 +4,12 @@ import pytest
 import ProxyPatternPool as ppp
 
 import logging
+
 logging.basicConfig()
 log = logging.getLogger("tests")
 
-# app._ppp._log.setLevel(logging.DEBUG)
-# app.log.setLevel(logging.DEBUG)
-# log.setLevel(logging.DEBUG)
-# app._ppp._initialize()
 
-def test_proxy():
+def test_proxy_direct():
     v1, v2 = "hello!", "world!"
     r1 = ppp.Proxy(close="close")
     r1.set(v1)
@@ -32,6 +29,7 @@ def test_proxy_threads():
     # thread local stuff
     def gen_data(i):
         return f"data: {i}"
+
     r = ppp.Proxy(fun=gen_data, max_size=None, close="close")
     assert r._nobjs == 0
     assert isinstance(r.__hash__(), int)
@@ -41,6 +39,7 @@ def test_proxy_threads():
     # another thread
     def run(i):
         assert r == f"data: {i}"
+
     t1 = threading.Thread(target=run, args=(1,))
     t1.start()
     t1.join()
@@ -70,11 +69,11 @@ def test_proxy_threads():
     assert str(r) == "0"
     # versatile
     r = ppp.Proxy(scope=ppp.Proxy.Scope.VERSATILE)
-    r._set_fun(lambda i: i+10)
+    r._set_fun(lambda i: i + 10)
     assert str(r) == "10"
 
 
-def test_proxy_pool():
+def test_proxy_pool_direct():
     ref = ppp.Proxy(fun=lambda i: i, max_size=2)
     i = ref._get_obj()
     assert len(ref._pool._avail) == 0
@@ -95,21 +94,26 @@ def test_proxy_pool():
     del ref
 
 
-def test_proxy_pool_thread():
+def test_proxy_pool_threads():
+    log.debug("testing with 2 threads")
     ref = ppp.Proxy(fun=lambda i: i, max_size=2)
     # test with 2 ordered threads to grasp to objects from the pool
     import threading
+
     event = threading.Event()
+
     def run_1(i: int):
-        r = str(ref)      # get previous object #0
+        r = str(ref)  # get previous object #0
         event.set()
         assert r == str(i)
         # ref._ret_obj()  # NOT RETURNED TO POOL
+
     def run_2(i: int):
         event.wait()
-        r = str(ref)      # generate a new object #1
+        r = str(ref)  # generate a new object #1
         assert r == str(i)
         # ref._ret_obj()  # NOT RETURNED TO POOL
+
     t1 = threading.Thread(target=run_1, args=(0,))
     t2 = threading.Thread(target=run_2, args=(1,))
     t1.start()
@@ -119,17 +123,18 @@ def test_proxy_pool_thread():
     del t1
     del t2
     # use a 3rd reference to raise an pool max size exception
+    log.debug("try timeout on max size")
     try:
-        ref._get_obj()   # failed attempt at generating #2
+        ref._get_obj(timeout=1)  # failed attempt at generating #2
         assert False, "must reach max_size"
     except Exception as e:
-        assert "pool max size reached" in str(e)
+        assert "timeout" in str(e)
     del ref
 
 
-def test_pool():
+def test_pool_direct():
     # test max_use
-    pool = ppp.Pool(fun = lambda i: i, max_size = 1, max_use = 2)
+    pool = ppp.Pool(fun=lambda i: i, max_size=1, max_use=2)
     i = pool.get()
     assert i == 0
     pool.ret(i)
@@ -149,13 +154,16 @@ def test_pool_class():
     class T:
         def __init__(self, count):
             self._count = count
+
         def close(self):
             self._count = None
             raise Exception("Oops!")
+
         def __str__(self):
             return f"T({self._count})"
+
     # basic
-    pool = ppp.Pool(fun = T, max_size = None, max_use = 1, close="close")
+    pool = ppp.Pool(fun=T, max_size=None, max_use=1, close="close")
     t = pool.get()
     assert str(t) == "T(0)"
     pool.ret(t)
@@ -164,8 +172,9 @@ def test_pool_class():
     pool.ret(t)
     pool.__delete__()
 
+
 def test_pool_delay():
-    pool = ppp.Pool(fun = lambda n: n, max_size = 0, max_delay = 0.4)
+    pool = ppp.Pool(fun=lambda n: n, max_size=0, max_delay=0.4)
     t1, t2 = pool.get(), pool.get()
     assert pool._nobjs == 2 and pool._nuses == 2
     pool.ret(t1)

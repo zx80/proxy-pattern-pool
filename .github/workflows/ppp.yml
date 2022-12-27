@@ -29,7 +29,7 @@ jobs:
         pip install -r dev-requirements.txt
     # Checks
     - name: Check with mypy
-      run: mypy ProxyPatternPool.py
+      run: mypy --implicit-optional ProxyPatternPool.py
     - name: Check with black
       run: black --check ProxyPatternPool.py
     - name: Check with flake8

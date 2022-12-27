@@ -27,6 +27,7 @@ class Pool:
     - fun: function to create objects on demand, called with the creation number.
     - max_size: maximum size of pool, 0 for unlimited.
     - min_size: minimum size of pool.
+    - timeout: give-up waiting after this time, None for no timeout.
     - max_use: how many times to use a something, 0 for unlimited.
     - max_delay: remove objects if unused, 0.0 for unlimited.
     - close: name of "close" method to call, if any.
@@ -41,19 +42,20 @@ class Pool:
         self,
         fun: Callable[[int], Any],
         max_size: int = 0,
-        max_use: int = 0,
         min_size: int = 1,
+        timeout: float = None,
+        max_use: int = 0,
         max_delay: float = 0.0,
         close: Optional[str] = None,
     ):
-        # global pool re-entrant lock
-        self._lock = threading.RLock()
+        # data attributes
         self._fun = fun
         self._nobjs = 0
         self._nuses = 0
         self._ncreated = 0
         self._max_size = max_size
         self._min_size = min_size
+        self._timeout = timeout
         self._max_use = max_use
         self._max_delay = max_delay
         self._close = close
@@ -62,6 +64,11 @@ class Pool:
         self._using: Set[Any] = set()
         # keep track of usage count and last return
         self._uses: Dict[Any, Pool.UseInfo] = dict()
+        # global pool re-entrant lock to manage attributes
+        self._lock = threading.RLock()
+        self._sem: Optional[threading.Semaphore] = None
+        if self._max_size:
+            self._sem = threading.BoundedSemaphore(self._max_size)
         # create the minimum number of objects
         while self._nobjs < self._min_size:
             self._new()
@@ -108,6 +115,8 @@ class Pool:
         """Create a new available object."""
         log.debug(f"creating new obj with {self._fun}")
         with self._lock:
+            if self._max_size and self._nobjs >= self._max_size:  # pragma: no cover
+                raise Exception(f"pool max size {self._max_size} reached")
             obj = self._fun(self._ncreated)
             self._ncreated += 1
             self._nobjs += 1
@@ -132,18 +141,21 @@ class Pool:
             del obj
             self._nobjs -= 1
 
-    def get(self):
+    def get(self, timeout=None):
         """Get a object from the pool, possibly creating one if needed."""
-        with self._lock:
-            if len(self._avail) == 0:
-                if self._max_size and self._nobjs >= self._max_size:
-                    raise Exception(f"object pool max size reached ({self._max_size})")
-                self._new()
-            obj = self._avail.pop()
-            self._using.add(obj)
-            self._nuses += 1
-            self._uses[obj].uses += 1
-            return obj
+        log.debug(f"get: timeout is {timeout}")
+        while True:
+            if self._sem:
+                if not self._sem.acquire(timeout=timeout if timeout else self._timeout):
+                    raise Exception("timeout")
+            with self._lock:
+                if len(self._avail) == 0:
+                    self._new()
+                obj = self._avail.pop()
+                self._using.add(obj)
+                self._nuses += 1
+                self._uses[obj].uses += 1
+                return obj
 
     def ret(self, obj):
         """Return object to pool."""
@@ -158,6 +170,8 @@ class Pool:
             else:
                 self._uses[obj].last = self._now()
                 self._avail.add(obj)
+            if self._sem:
+                self._sem.release()
 
 
 class Proxy:
@@ -200,10 +214,12 @@ class Proxy:
         self,
         obj: Any = None,
         set_name: str = "set",
-        fun: Optional[Callable] = None,
+        fun: Callable = None,
         max_size: int = 0,
+        min_size: int = 1,
         max_use: int = 0,
         max_delay: float = 0.0,
+        timeout: float = None,
         scope: Scope = Scope.AUTO,
         close: Optional[str] = None,
     ):
@@ -215,6 +231,7 @@ class Proxy:
         - max_size: pool maximum size, 0 for unlimited, None for no pooling.
         - max_use: when pooling, how many times to reuse an object.
         - max_delay: when pooling, when to discard an unused object.
+        - timeout: when pooling, how long to wait for an object.
         - scope: level of sharing, default is to chose between SHARED and THREAD.
         - close: "close" method, if any.
         """
@@ -224,8 +241,10 @@ class Proxy:
             Proxy.Scope.THREAD if scope == Proxy.Scope.AUTO and fun else
             scope)  # fmt: skip
         self._pool_max_size = max_size
+        self._pool_min_size = min_size
         self._pool_max_use = max_use
         self._pool_max_delay = max_delay
+        self._pool_timeout = timeout
         self._close = close
         self._set(obj=obj, fun=fun, mandatory=False)
         if set_name and set_name != "_set":
@@ -251,7 +270,8 @@ class Proxy:
         assert self._scope in (Proxy.Scope.THREAD, Proxy.Scope.VERSATILE)
         self._fun = fun
         self._pool = \
-            Pool(fun, self._pool_max_size, self._pool_max_use,
+            Pool(fun, max_size=self._pool_max_size, min_size=self._pool_min_size,
+                 timeout=self._pool_timeout, max_use=self._pool_max_use,
                  max_delay=self._pool_max_delay, close=self._close) \
                 if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0
@@ -279,14 +299,14 @@ class Proxy:
         elif mandatory:
             raise Exception("Proxy must set either obj or fun")
 
-    def _get_obj(self):
+    def _get_obj(self, timeout=None):
         """Get current wrapped object, possibly creating it."""
         # handle creation
         if self._fun and not hasattr(self._local, "obj"):
             if self._pool_max_size is not None:
                 # sync on pool to extract a consistent nobjs
                 with self._pool._lock:
-                    self._local.obj = self._pool.get()
+                    self._local.obj = self._pool.get(timeout=timeout)
                     self._nobjs = self._pool._nobjs
             else:  # no pool
                 self._local.obj = self._fun(self._nobjs)
