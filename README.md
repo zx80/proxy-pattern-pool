@@ -144,6 +144,8 @@ stuff to be shared by these thread is even mooter!
 
 - [Psycopg Pool](https://www.psycopg.org/psycopg3/docs/advanced/pool.html)
   for pooling Postgres database connexions.
+- [Discussion](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
+  about database pool sizing.
 
 ## License
 
@@ -184,3 +186,4 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 
 - `__enter__` and `__exit__`?
 - add `min_size` parameter to `Proxy`
+- pool should wait instead of erroring on `max_size`
