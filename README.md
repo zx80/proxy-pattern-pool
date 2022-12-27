@@ -42,6 +42,8 @@ This module provides two classes:
   expensive-to-create objects such as database connections. The above proxy
   object creates a pool automatically depending on its parameters.
 
+  Call `db._ret_obj()` to return the object to the pool when done with it.
+
 ## Documentation
 
 The `Proxy` class manages accesses to one or more objects, possibly using
