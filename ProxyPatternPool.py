@@ -46,6 +46,7 @@ class Pool:
         max_delay: float = 0.0,
         close: Optional[str] = None,
     ):
+        # global pool re-entrant lock
         self._lock = threading.RLock()
         self._fun = fun
         self._nobjs = 0
@@ -147,6 +148,8 @@ class Pool:
     def ret(self, obj):
         """Return object to pool."""
         with self._lock:
+            if obj not in self._using:
+                return
             self._using.remove(obj)
             if self._max_use and self._uses[obj].uses >= self._max_use:
                 self._del(obj)

@@ -133,6 +133,8 @@ def test_pool():
     i = pool.get()
     assert i == 0
     pool.ret(i)
+    # multiple return must be ignored
+    pool.ret(i)
     i = pool.get()
     assert i == 0
     pool.ret(i)
