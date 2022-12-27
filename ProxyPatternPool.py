@@ -21,6 +21,10 @@ __version__ = pkg.require("ProxyPatternPool")[0].version
 log = logging.getLogger("ppp")
 
 
+class TimeOut(Exception):
+    pass
+
+
 class Pool:
     """Thread-safe pool of something, created on demand.
 
@@ -143,11 +147,10 @@ class Pool:
 
     def get(self, timeout=None):
         """Get a object from the pool, possibly creating one if needed."""
-        log.debug(f"get: timeout is {timeout}")
         while True:
             if self._sem:
                 if not self._sem.acquire(timeout=timeout if timeout else self._timeout):
-                    raise Exception("timeout")
+                    raise TimeOut(f"timeout after {timeout}")
             with self._lock:
                 if len(self._avail) == 0:
                     self._new()

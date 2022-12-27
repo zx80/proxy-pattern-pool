@@ -137,14 +137,14 @@ import Shared
 Shared.init_app("hello world!")
 ```
 
-## Note
+## Notes
 
-This module is somehow rhetorical: because of the GIL Python is quite bad a
-parallel language, so the point of creating threads which will mostly not
-really run in parallel is moot, thus the point of having a clever pool of
-stuff to be shared by these thread is even mooter!
+This module is somehow rhetorical: because of the GIL Python is quite bad as a
+parallel language, so the point of creating threads which will mostly not really
+run in parallel is moot, thus the point of having a clever pool of stuff to be
+shared by these thread is even mooter!
 
-## See Also
+See Also:
 
 - [Psycopg Pool](https://www.psycopg.org/psycopg3/docs/advanced/pool.html)
   for pooling Postgres database connexions.
@@ -163,6 +163,11 @@ This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/)
 are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
+
+### 3.0 on 2022-12-27
+
+Wait for available objects when `max_size` is reached.
+Add `min_size` parameter to `Proxy`.
 
 ### 2.1 on 2022-12-27
 

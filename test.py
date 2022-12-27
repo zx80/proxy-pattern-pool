@@ -125,10 +125,10 @@ def test_proxy_pool_threads():
     # use a 3rd reference to raise an pool max size exception
     log.debug("try timeout on max size")
     try:
-        ref._get_obj(timeout=1)  # failed attempt at generating #2
+        ref._get_obj(timeout=0.1)  # failed attempt at generating #2
         assert False, "must reach max_size"
-    except Exception as e:
-        assert "timeout" in str(e)
+    except ppp.TimeOut as e:
+        assert "timeout after" in str(e)
     del ref
 
 
