@@ -183,3 +183,4 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 ## TODO
 
 - `__enter__` and `__exit__`?
+- add `min_size` parameter to `Proxy`
