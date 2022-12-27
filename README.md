@@ -143,7 +143,7 @@ stuff to be shared by these thread is even mooter!
 ## See Also
 
 - [Psycopg Pool](https://www.psycopg.org/psycopg3/docs/advanced/pool.html)
-  for pooling database connexions.
+  for pooling Postgres database connexions.
 
 ## License
 
