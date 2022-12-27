@@ -232,6 +232,7 @@ class Proxy:
         - obj: object to be wrapped, can also be provided later.
         - fun: function to generated a per-thread/or-whatever wrapped object.
         - max_size: pool maximum size, 0 for unlimited, None for no pooling.
+        - min_size: pool minimum size.
         - max_use: when pooling, how many times to reuse an object.
         - max_delay: when pooling, when to discard an unused object.
         - timeout: when pooling, how long to wait for an object.
