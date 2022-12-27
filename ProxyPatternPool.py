@@ -217,7 +217,7 @@ class Proxy:
         self,
         obj: Any = None,
         set_name: str = "set",
-        fun: Callable = None,
+        fun: Callable[[int], Any] = None,
         max_size: int = 0,
         min_size: int = 1,
         max_use: int = 0,
