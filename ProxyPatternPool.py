@@ -61,6 +61,10 @@ class Pool:
         self._using: Set[Any] = set()
         # keep track of usage count and last return
         self._uses: Dict[Any, Pool.UseInfo] = dict()
+        # create the minimum number of objects
+        while self._nobjs < self._min_size:
+            self._new()
+        # start housekeeper thread if needed
         self._housekeeper: Optional[threading.Thread] = None
         if self._max_delay:
             self._housekeeper = threading.Thread(target=self._houseKeeping, daemon=True)
@@ -92,48 +96,53 @@ class Pool:
     def __delete__(self):
         """This should be done automatically, but eventually."""
         with self._lock:
+            # using should be empty
             self._using.clear()
             self._uses.clear()
-            # FIXME what about _using?
             for obj in list(self._avail):
                 self._del(obj)
             self._avail.clear()
 
-    def get(self):
-        """Get a object from the pool, possibly creating one if needed."""
+    def _new(self):
+        """Create a new available object."""
+        log.debug(f"creating new obj with {self._fun}")
         with self._lock:
-            try:
-                obj = self._avail.pop()
-                self._using.add(obj)
-                self._nuses += 1
-                self._uses[obj].uses += 1
-            except KeyError:  # nothing available
-                if self._max_size and self._nobjs >= self._max_size:
-                    raise Exception(f"object pool max size reached ({self._max_size})")
-                log.debug(f"creating new obj with {self._fun}")
-                obj = self._fun(self._ncreated)
-                self._ncreated += 1
-                self._nobjs += 1
-                self._nuses += 1
-                self._using.add(obj)
-                self._uses[obj] = Pool.UseInfo(1, self._now())
+            obj = self._fun(self._ncreated)
+            self._ncreated += 1
+            self._nobjs += 1
+            self._avail.add(obj)
+            self._uses[obj] = Pool.UseInfo(0, self._now())
             return obj
 
     def _del(self, obj):
         """Destroy this object."""
-        if self._close and hasattr(obj, self._close):
-            try:
-                getattr(obj, self._close)()
-            except Exception as e:
-                log.warning(f"exception on {self._close}(): {e}")
-        if obj in self._uses:
-            del self._uses[obj]
-        if obj in self._avail:
-            self._avail.remove(obj)
-        if obj in self._using:  # pragma: no cover
-            self._using.remove(obj)
-        del obj
-        self._nobjs -= 1
+        with self._lock:
+            if self._close and hasattr(obj, self._close):
+                try:
+                    getattr(obj, self._close)()
+                except Exception as e:
+                    log.warning(f"exception on {self._close}(): {e}")
+            if obj in self._uses:
+                del self._uses[obj]
+            if obj in self._avail:
+                self._avail.remove(obj)
+            if obj in self._using:  # pragma: no cover
+                self._using.remove(obj)
+            del obj
+            self._nobjs -= 1
+
+    def get(self):
+        """Get a object from the pool, possibly creating one if needed."""
+        with self._lock:
+            if len(self._avail) == 0:
+                if self._max_size and self._nobjs >= self._max_size:
+                    raise Exception(f"object pool max size reached ({self._max_size})")
+                self._new()
+            obj = self._avail.pop()
+            self._using.add(obj)
+            self._nuses += 1
+            self._uses[obj].uses += 1
+            return obj
 
     def ret(self, obj):
         """Return object to pool."""
@@ -141,6 +150,8 @@ class Pool:
             self._using.remove(obj)
             if self._max_use and self._uses[obj].uses >= self._max_use:
                 self._del(obj)
+                if self._nobjs < self._min_size:
+                    self._new()
             else:
                 self._uses[obj].last = self._now()
                 self._avail.add(obj)
