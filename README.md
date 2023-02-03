@@ -197,3 +197,4 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 
 - `__enter__` and `__exit__`?
 - greenlet, eventlet, or gevent
+- add a max time for object lending?
