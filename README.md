@@ -196,3 +196,4 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 ## TODO
 
 - `__enter__` and `__exit__`?
+- greenlet, eventlet, or gevent
