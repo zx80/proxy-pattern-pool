@@ -57,7 +57,6 @@ venv:
 	$(PYTHON) -m venv venv
 	source venv/bin/activate
 	pip install -U pip
-	pip install -e .
 	pip install -r dev-requirements.txt
 
 $(MODULE).egg-info: venv

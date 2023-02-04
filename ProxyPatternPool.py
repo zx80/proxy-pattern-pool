@@ -7,6 +7,7 @@ This code is public domain.
 from typing import Optional, Callable, Dict, Set, Any
 from enum import Enum
 from dataclasses import dataclass
+from contextlib import contextmanager
 import threading
 import datetime
 import time
@@ -21,7 +22,15 @@ __version__ = pkg.require("ProxyPatternPool")[0].version
 log = logging.getLogger("ppp")
 
 
-class TimeOut(Exception):
+class PoolException(Exception):
+    pass
+
+
+class TimeOut(PoolException):
+    pass
+
+
+class ProxyException(Exception):
     pass
 
 
@@ -33,14 +42,16 @@ class Pool:
     - min_size: minimum size of pool.
     - timeout: give-up waiting after this time, None for no timeout.
     - max_use: how many times to use a something, 0 for unlimited.
-    - max_delay: remove objects if unused, 0.0 for unlimited.
+    - max_avail_delay: remove objects if unused for this secs, 0.0 for unlimited.
+    - max_using_delay: warn if object is keept for more than this time, 0.0 for no warning.
     - close: name of "close" method to call, if any.
     """
 
     @dataclass
     class UseInfo:
         uses: int
-        last: float
+        last_get: float
+        last_ret: float
 
     def __init__(
         self,
@@ -49,7 +60,8 @@ class Pool:
         min_size: int = 1,
         timeout: float = None,
         max_use: int = 0,
-        max_delay: float = 0.0,
+        max_avail_delay: float = 0.0,
+        max_using_delay: float = 0.0,
         close: Optional[str] = None,
     ):
         # data attributes
@@ -61,13 +73,14 @@ class Pool:
         self._min_size = min_size
         self._timeout = timeout
         self._max_use = max_use
-        self._max_delay = max_delay
+        self._max_avail_delay = max_avail_delay
+        self._max_using_delay = max_using_delay
         self._close = close
         # pool's content: available vs in use objects
         self._avail: Set[Any] = set()
         self._using: Set[Any] = set()
-        # keep track of usage count and last return
-        self._uses: Dict[Any, Pool.UseInfo] = dict()
+        # keep track of usage count and last ops
+        self._uses: Dict[Any, Pool.UseInfo] = {}
         # global pool re-entrant lock to manage attributes
         self._lock = threading.RLock()
         self._sem: Optional[threading.Semaphore] = None
@@ -78,7 +91,16 @@ class Pool:
             self._new()
         # start housekeeper thread if needed
         self._housekeeper: Optional[threading.Thread] = None
-        if self._max_delay:
+        if self._max_avail_delay or self._max_using_delay:
+            self._delay = self._max_avail_delay
+            if not self._delay or \
+               self._max_using_delay and self._delay > self._max_using_delay:  # fmt: skip
+                self._delay = self._max_using_delay
+            self._delay /= 2.0
+        else:
+            self._delay = 0.0
+        log.debug(f"house keeping delay: {self._delay}")
+        if self._delay:
             self._housekeeper = threading.Thread(target=self._houseKeeping, daemon=True)
             self._housekeeper.start()
 
@@ -91,19 +113,30 @@ class Pool:
 
     def _houseKeeping(self):
         """Housekeeping thread."""
-        log.warning(f"housekeeper running every {self._max_delay}")
+        log.warning(f"housekeeper running every {self._delay}")
         while True:
-            time.sleep(self._max_delay)
+            time.sleep(self._delay)
             log.debug(str(self))
             if self._nobjs <= self._min_size:
                 continue
             with self._lock:
                 now = self._now()
-                for obj in list(self._avail):
-                    if now - self._uses[obj].last >= self._max_delay:
-                        self._del(obj)
-                        if self._nobjs <= self._min_size:
-                            break
+                if self._max_using_delay:
+                    long_running, long_time = 0, 0.0
+                    for obj in list(self._using):
+                        if now - self._uses[obj].last_get >= self._max_using_delay:
+                            long_running += 1
+                            long_time += now - self._uses[obj].last_get
+                    if long_running:
+                        log.warning(
+                            f"long running objects: {long_running} ({long_time / long_running})"
+                        )
+                if self._max_avail_delay:
+                    for obj in list(self._avail):
+                        if now - self._uses[obj].last_ret >= self._max_avail_delay:
+                            self._del(obj)
+                            if self._nobjs <= self._min_size:
+                                break
 
     def __delete__(self):
         """This should be done automatically, but eventually."""
@@ -120,12 +153,13 @@ class Pool:
         log.debug(f"creating new obj with {self._fun}")
         with self._lock:
             if self._max_size and self._nobjs >= self._max_size:  # pragma: no cover
-                raise Exception(f"pool max size {self._max_size} reached")
+                raise PoolException(f"pool max size {self._max_size} reached")
             obj = self._fun(self._ncreated)
             self._ncreated += 1
             self._nobjs += 1
             self._avail.add(obj)
-            self._uses[obj] = Pool.UseInfo(0, self._now())
+            now = self._now()
+            self._uses[obj] = Pool.UseInfo(0, now, now)
             return obj
 
     def _del(self, obj):
@@ -135,7 +169,7 @@ class Pool:
                 try:
                     getattr(obj, self._close)()
                 except Exception as e:
-                    log.warning(f"exception on {self._close}(): {e}")
+                    log.error(f"exception on {self._close}(): {e}")
             if obj in self._uses:
                 del self._uses[obj]
             if obj in self._avail:
@@ -158,6 +192,7 @@ class Pool:
                 self._using.add(obj)
                 self._nuses += 1
                 self._uses[obj].uses += 1
+                self._uses[obj].last_get = self._now()
                 return obj
 
     def ret(self, obj):
@@ -171,10 +206,19 @@ class Pool:
                 if self._nobjs < self._min_size:
                     self._new()
             else:
-                self._uses[obj].last = self._now()
+                self._uses[obj].last_ret = self._now()
                 self._avail.add(obj)
             if self._sem:
                 self._sem.release()
+
+    @contextmanager
+    def obj(self, timeout=None):
+        """Extract one object from the pool in a `with` scope."""
+        try:
+            o = self.get()
+            yield o
+        finally:
+            self.ret(o)
 
 
 class Proxy:
@@ -221,7 +265,8 @@ class Proxy:
         max_size: int = 0,
         min_size: int = 1,
         max_use: int = 0,
-        max_delay: float = 0.0,
+        max_avail_delay: float = 0.0,
+        max_using_delay: float = 0.0,
         timeout: float = None,
         scope: Scope = Scope.AUTO,
         close: Optional[str] = None,
@@ -234,7 +279,8 @@ class Proxy:
         - max_size: pool maximum size, 0 for unlimited, None for no pooling.
         - min_size: pool minimum size.
         - max_use: when pooling, how many times to reuse an object.
-        - max_delay: when pooling, when to discard an unused object.
+        - max_avail_delay: when pooling, when to discard an unused object.
+        - max_using_delay: when pooling, warn about long uses.
         - timeout: when pooling, how long to wait for an object.
         - scope: level of sharing, default is to chose between SHARED and THREAD.
         - close: "close" method, if any.
@@ -247,7 +293,8 @@ class Proxy:
         self._pool_max_size = max_size
         self._pool_min_size = min_size
         self._pool_max_use = max_use
-        self._pool_max_delay = max_delay
+        self._pool_max_avail_delay = max_avail_delay
+        self._pool_max_using_delay = max_using_delay
         self._pool_timeout = timeout
         self._close = close
         self._set(obj=obj, fun=fun, mandatory=False)
@@ -273,11 +320,15 @@ class Proxy:
             self._scope = Proxy.Scope.THREAD
         assert self._scope in (Proxy.Scope.THREAD, Proxy.Scope.VERSATILE)
         self._fun = fun
-        self._pool = \
-            Pool(fun, max_size=self._pool_max_size, min_size=self._pool_min_size,
-                 timeout=self._pool_timeout, max_use=self._pool_max_use,
-                 max_delay=self._pool_max_delay, close=self._close) \
-                if self._pool_max_size is not None else None  # fmt: skip
+        self._pool = Pool(fun,
+                          max_size=self._pool_max_size,
+                          min_size=self._pool_min_size,
+                          timeout=self._pool_timeout,
+                          max_use=self._pool_max_use,
+                          max_avail_delay=self._pool_max_avail_delay,
+                          max_using_delay=self._pool_max_using_delay,
+                          close=self._close) \
+            if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0
         if self._scope == Proxy.Scope.THREAD:
             self._local = threading.local()
@@ -295,13 +346,13 @@ class Proxy:
     ):
         """Set current wrapped object or generation function."""
         if obj and fun:
-            raise Exception("Proxy cannot set both obj and fun")
+            raise ProxyException("Proxy cannot set both obj and fun")
         elif obj:
             return self._set_obj(obj)
         elif fun:
             return self._set_fun(fun)
         elif mandatory:
-            raise Exception("Proxy must set either obj or fun")
+            raise ProxyException("Proxy must set either obj or fun")
 
     def _get_obj(self, timeout=None):
         """Get current wrapped object, possibly creating it."""
@@ -328,6 +379,15 @@ class Proxy:
     def __getattr__(self, item):
         """Forward everything unknown to contained object."""
         return self._get_obj().__getattribute__(item)
+
+    @contextmanager
+    def _obj(self, timeout=None):
+        """Get a object in a `with` scope."""
+        try:
+            o = self._get_obj(timeout=timeout)
+            yield o
+        finally:
+            self._ret_obj()
 
     # also forward a few special methods
     def __str__(self):

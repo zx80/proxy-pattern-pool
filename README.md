@@ -3,7 +3,7 @@
 Generic Proxy and Pool Classes for Python.
 
 ![Status](https://github.com/zx80/proxy-pattern-pool/actions/workflows/ppp.yml/badge.svg?branch=main&style=flat)
-![Tests](https://img.shields.io/badge/tests-7%20✓-success)
+![Tests](https://img.shields.io/badge/tests-8%20✓-success)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-success)
 ![Issues](https://img.shields.io/github/issues/zx80/proxy-pattern-pool?style=flat)
 ![Python](https://img.shields.io/badge/python-3-informational)
@@ -72,8 +72,10 @@ The `Proxy` constructors expects the following parameters:
   Default is *1*.
 - `max_use` how many times an object should be reused.
   default is *0* which means unlimited.
-- `max_delay` after which unused objects are discarded.
+- `max_avail_delay` after which unused objects are discarded.
   default is *0.0* which means unlimited.
+- `max_using_delay` warn when objects are being used for too long.
+  default is *0.0* which means no warning.
 - `close` name of the function to call when discarding an object,
   default is *None* means nothing is called.
 
@@ -91,7 +93,8 @@ Its constructor expects the following parameters:
 - `min_size` minimum size of pool.
 - `timeout` maximum time to wait for something.
 - `max_use` after how many usage to discard an object.
-- `max_delay` when to discard an unused object.
+- `max_avail_delay` when to discard an unused object.
+- `max_using_delay` when to warn about object kept for a long time.
 - `close` method to call when discarding an object, default is *None*.
 
 Objects are created on demand by calling `fun` when needed.
@@ -166,6 +169,12 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
+### 4.0 on ?
+
+Add `max_using_delay` for warnings.
+Add `with` support to both `Pool` and `Proxy` classes.
+Add module-specific exceptions: `PoolException`, `ProxyException`.
+
 ### 3.0 on 2022-12-27
 
 Wait for available objects when `max_size` is reached.
@@ -195,6 +204,5 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 
 ## TODO
 
-- `__enter__` and `__exit__`?
-- greenlet, eventlet, or gevent
-- add a max time for object lending?
+- greenlet, eventlet, or gevent?
+- add a method to delete the proxy?

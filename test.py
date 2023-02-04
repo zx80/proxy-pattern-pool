@@ -5,8 +5,9 @@ import ProxyPatternPool as ppp
 
 import logging
 
-logging.basicConfig()
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("tests")
+# ppp.log.setLevel(logging.DEBUG)
 
 
 def test_proxy_direct():
@@ -174,7 +175,8 @@ def test_pool_class():
 
 
 def test_pool_delay():
-    pool = ppp.Pool(fun=lambda n: n, max_size=0, max_delay=0.4)
+    # available delay
+    pool = ppp.Pool(fun=lambda n: n, max_size=0, max_avail_delay=0.4)
     t1, t2 = pool.get(), pool.get()
     assert pool._nobjs == 2 and pool._nuses == 2
     pool.ret(t1)
@@ -188,3 +190,27 @@ def test_pool_delay():
     pool.ret(t1)
     pool.ret(t2)
     pool.__delete__()
+    # using delay
+    pool = ppp.Pool(fun=lambda n: f"Hello {n}!", max_size=2, max_using_delay=0.3)
+    t1, t2 = pool.get(), pool.get()
+    assert t1 == "Hello 0!" and t2 == "Hello 1!"
+    time.sleep(0.2)
+    pool.ret(t1)
+    time.sleep(0.3)
+    pool.ret(t2)
+    pool.__delete__()
+
+
+def test_with():
+    pool = ppp.Pool(fun=lambda n: f"Foo {n}!", min_size=0, max_size=2)
+    with pool.obj() as o:
+        assert o == "Foo 0!"
+    t = pool.get()
+    assert t == "Foo 0!"
+    pool.ret(t)
+    pool.__delete__()
+    prox = ppp.Proxy(fun=lambda n: f"Bla {n}!", min_size=0, max_size=2)
+    with prox._obj() as o:
+        assert o == "Bla 0!"
+    with prox._obj() as o:
+        assert o == "Bla 0!"
