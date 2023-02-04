@@ -63,6 +63,8 @@ class Pool:
         max_avail_delay: float = 0.0,
         max_using_delay: float = 0.0,
         close: Optional[str] = None,
+        # temporary upward compatibility
+        max_delay: float = 0.0,
     ):
         # data attributes
         self._fun = fun
@@ -73,7 +75,7 @@ class Pool:
         self._min_size = min_size
         self._timeout = timeout
         self._max_use = max_use
-        self._max_avail_delay = max_avail_delay
+        self._max_avail_delay = max_avail_delay or max_delay
         self._max_using_delay = max_using_delay
         self._close = close
         # pool's content: available vs in use objects
