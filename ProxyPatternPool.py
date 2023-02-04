@@ -99,7 +99,6 @@ class Pool:
             self._delay /= 2.0
         else:
             self._delay = 0.0
-        log.debug(f"house keeping delay: {self._delay}")
         if self._delay:
             self._housekeeper = threading.Thread(target=self._houseKeeping, daemon=True)
             self._housekeeper.start()
