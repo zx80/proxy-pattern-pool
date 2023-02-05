@@ -110,19 +110,21 @@ class Pool:
         return f"o={o} u={u} a={a} i={i}"
 
     def _now(self) -> float:
+        """Return now as a convenient float, in seconds."""
         return datetime.datetime.timestamp(datetime.datetime.now())
 
     def _houseKeeping(self):
         """Housekeeping thread."""
-        log.warning(f"housekeeper running every {self._delay}")
+        log.info(f"housekeeper running every {self._delay}")
         while True:
             time.sleep(self._delay)
             log.debug(str(self))
-            if self._nobjs <= self._min_size:
+            if self._nobjs <= self._min_size and not self._max_using_delay:
                 continue
             with self._lock:
                 now = self._now()
                 if self._max_using_delay:
+                    # warn about long running objects
                     long_running, long_time = 0, 0.0
                     for obj in list(self._using):
                         if now - self._uses[obj].last_get >= self._max_using_delay:
@@ -133,6 +135,7 @@ class Pool:
                             f"long running objects: {long_running} ({long_time / long_running})"
                         )
                 if self._max_avail_delay:
+                    # close objects unused for too long
                     for obj in list(self._avail):
                         if now - self._uses[obj].last_ret >= self._max_avail_delay:
                             self._del(obj)
