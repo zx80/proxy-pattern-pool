@@ -46,10 +46,11 @@ check: check.mypy check.pymarkdown check.black check.flake8 check.pytest check.c
 
 .PHONY: clean clean.venv
 clean:
-	$(RM) -r __pycache__ */__pycache__ *.egg-info dist build .mypy_cache .pytest_cache .coverage htmlcov
+	$(RM) -r __pycache__ */__pycache__ dist build .mypy_cache .pytest_cache .coverage htmlcov
 	$(RM) $(F.pdf)
 
 clean.venv: clean
+	$(RM) -rf *.egg-info
 	$(RM) -r venv
 
 # for local testing
