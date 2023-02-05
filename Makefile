@@ -50,8 +50,7 @@ clean:
 	$(RM) $(F.pdf)
 
 clean.venv: clean
-	$(RM) -rf *.egg-info
-	$(RM) -r venv
+	$(RM) -r venv *.egg-info
 
 # for local testing
 venv:
