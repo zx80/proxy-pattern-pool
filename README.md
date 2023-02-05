@@ -169,7 +169,7 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
-### 4.0 on ?
+### 4.0 on 2023-02-05
 
 Add `max_using_delay` for warnings.
 Add `with` support to both `Pool` and `Proxy` classes.
