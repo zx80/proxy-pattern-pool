@@ -38,7 +38,7 @@ check.coverage: venv
 	coverage html $(MODULE).py
 	coverage report --fail-under=100 --include='*/$(MODULE).py'
 
-check.pymarkdown:
+check.pymarkdown: venv
 	source venv/bin/activate
 	pymarkdown scan $(F.md)
 
