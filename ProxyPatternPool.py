@@ -274,6 +274,8 @@ class Proxy:
         timeout: float = None,
         scope: Scope = Scope.AUTO,
         close: Optional[str] = None,
+        # temporary backward compatibility
+        max_delay: float = 0.0,
     ):
         """Constructor parameters:
 
@@ -297,7 +299,7 @@ class Proxy:
         self._pool_max_size = max_size
         self._pool_min_size = min_size
         self._pool_max_use = max_use
-        self._pool_max_avail_delay = max_avail_delay
+        self._pool_max_avail_delay = max_avail_delay or max_delay
         self._pool_max_using_delay = max_using_delay
         self._pool_timeout = timeout
         self._close = close
