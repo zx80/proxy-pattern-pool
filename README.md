@@ -206,3 +206,4 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 
 - greenlet, eventlet, or gevent?
 - add a method to delete the proxy?
+- add an actual timeout feature?
