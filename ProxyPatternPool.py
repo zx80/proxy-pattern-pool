@@ -4,6 +4,7 @@ Generic Proxy Pattern Pool for Python.
 This code is public domain.
 """
 
+# FIXME use dict/set/|None when version allows
 from typing import Optional, Callable, Dict, Set, Any
 from enum import Enum
 from dataclasses import dataclass
@@ -120,6 +121,7 @@ class Pool:
             time.sleep(self._delay)
             log.debug(str(self))
             if self._nobjs <= self._min_size and not self._max_using_delay:
+                # nothing to do this round
                 continue
             with self._lock:
                 now = self._now()
@@ -131,6 +133,7 @@ class Pool:
                             long_running += 1
                             long_time += now - self._uses[obj].last_get
                     if long_running:
+                        # TODO what to do about these? force return?
                         log.warning(
                             f"long running objects: {long_running} ({long_time / long_running})"
                         )
@@ -139,6 +142,7 @@ class Pool:
                     for obj in list(self._avail):
                         if now - self._uses[obj].last_ret >= self._max_avail_delay:
                             self._del(obj)
+                            # stop deleting objects if min size is reached
                             if self._nobjs <= self._min_size:
                                 break
 
