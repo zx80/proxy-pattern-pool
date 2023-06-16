@@ -169,6 +169,11 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
+### 5.0 on 2023-06-16
+
+Use `pyproject.toml` only.
+Require Python *3.10* for simpler code.
+
 ### 4.0 on 2023-02-05
 
 Add `max_using_delay` for warnings.
