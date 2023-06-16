@@ -26,8 +26,7 @@ jobs:
     - name: Install Python Dependencies
       run: |
         pip install -U pip
-        pip install -e .
-        pip install -r dev-requirements.txt
+        pip install -e .[local,dev]
     # Checks
     - name: Check with mypy
       run: mypy --implicit-optional ProxyPatternPool.py
