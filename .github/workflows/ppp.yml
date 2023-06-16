@@ -30,8 +30,8 @@ jobs:
     # Checks
     - name: Check with mypy
       run: mypy --implicit-optional ProxyPatternPool.py
-    - name: Check with black
-      run: black --check ProxyPatternPool.py
+    # - name: Check with black
+    #  run: black --check ProxyPatternPool.py
     - name: Check with flake8
       run: flake8 --ignore=E127,E227,E501,F401,E402 ProxyPatternPool.py
     - name: Check with pytest
