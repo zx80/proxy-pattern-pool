@@ -57,14 +57,11 @@ venv:
 	$(PYTHON) -m venv venv
 	source venv/bin/activate
 	pip install -U pip
-	pip install -r dev-requirements.txt
-
-$(MODULE).egg-info: venv
-	pip install -e .
+	pip install -e .[dev,pub,local]
 
 # generate source and built distribution
-dist:
-	$(PYTHON) setup.py sdist bdist_wheel
+dist: venv
+	$(PYTHON) -m build
 
 .PHONY: publish
 publish: dist

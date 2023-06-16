@@ -5,7 +5,7 @@ This code is public domain.
 """
 
 # FIXME use dict/set/|None when version allows
-from typing import Optional, Callable, Dict, Set, Any
+from typing import Callable, Any
 from enum import Enum
 from dataclasses import dataclass
 from contextlib import contextmanager
@@ -15,9 +15,9 @@ import time
 import logging
 
 # get module version
-import pkg_resources as pkg  # type: ignore
+from importlib.metadata import version as pkg_version
 
-__version__ = pkg.require("ProxyPatternPool")[0].version
+__version__ = pkg_version("ProxyPatternPool")
 
 
 log = logging.getLogger("ppp")
@@ -63,7 +63,7 @@ class Pool:
         max_use: int = 0,
         max_avail_delay: float = 0.0,
         max_using_delay: float = 0.0,
-        close: Optional[str] = None,
+        close: str|None = None,
         # temporary upward compatibility
         max_delay: float = 0.0,
     ):
@@ -80,20 +80,20 @@ class Pool:
         self._max_using_delay = max_using_delay
         self._close = close
         # pool's content: available vs in use objects
-        self._avail: Set[Any] = set()
-        self._using: Set[Any] = set()
+        self._avail: set[Any] = set()
+        self._using: set[Any] = set()
         # keep track of usage count and last ops
-        self._uses: Dict[Any, Pool.UseInfo] = {}
+        self._uses: dict[Any, Pool.UseInfo] = {}
         # global pool re-entrant lock to manage attributes
         self._lock = threading.RLock()
-        self._sem: Optional[threading.Semaphore] = None
+        self._sem: threading.Semaphore|None = None
         if self._max_size:
             self._sem = threading.BoundedSemaphore(self._max_size)
         # create the minimum number of objects
         while self._nobjs < self._min_size:
             self._new()
         # start housekeeper thread if needed
-        self._housekeeper: Optional[threading.Thread] = None
+        self._housekeeper: threading.Thread|None = None
         if self._max_avail_delay or self._max_using_delay:
             self._delay = self._max_avail_delay
             if not self._delay or \
@@ -277,7 +277,7 @@ class Proxy:
         max_using_delay: float = 0.0,
         timeout: float = None,
         scope: Scope = Scope.AUTO,
-        close: Optional[str] = None,
+        close: str|None = None,
         # temporary backward compatibility
         max_delay: float = 0.0,
     ):
@@ -351,7 +351,7 @@ class Proxy:
     def _set(
         self,
         obj: Any = None,
-        fun: Optional[Callable[[int], Any]] = None,
+        fun: Callable[[int], Any]|None = None,
         mandatory=True,
     ):
         """Set current wrapped object or generation function."""
