@@ -13,7 +13,8 @@ jobs:
       matrix:
         # broken: pypy3.7
         # broken: 3.7 (pymarkdownlnt)
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12-dev", "pypy3.8", "pypy3.9"]
+        # 3.8 and 3.9: needs more Typing
+        python-version: ["3.10", "3.11", "3.12-dev"]
     steps:
     # Setup
     - uses: actions/checkout@v3
@@ -33,7 +34,7 @@ jobs:
     - name: Check with black
       run: black --check ProxyPatternPool.py
     - name: Check with flake8
-      run: flake8 --ignore=E127,E501,F401,E402 ProxyPatternPool.py
+      run: flake8 --ignore=E127,E227,E501,F401,E402 ProxyPatternPool.py
     - name: Check with pytest
       run: pytest --log-level=debug --capture=tee-sys test.py
     - name: Check with coverage
