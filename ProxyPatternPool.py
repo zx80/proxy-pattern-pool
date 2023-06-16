@@ -4,7 +4,6 @@ Generic Proxy Pattern Pool for Python.
 This code is public domain.
 """
 
-# FIXME use dict/set/|None when version allows
 from typing import Callable, Any
 from enum import Enum
 from dataclasses import dataclass
