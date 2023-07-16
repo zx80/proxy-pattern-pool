@@ -210,6 +210,9 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 ## TODO
 
 - greenlet, eventlet, or gevent?
+  - greenlet is a low-level interface which is used by eventlet.
+  - threading.local is ok for eventlet because they are considered different threads.
+  - gevent is built upon libevent.
 - add a method to delete the proxy?
 - add an actual timeout feature?
 - how to manage a return automatically?
