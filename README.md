@@ -3,7 +3,7 @@
 Generic Proxy and Pool Classes for Python.
 
 ![Status](https://github.com/zx80/proxy-pattern-pool/actions/workflows/ppp.yml/badge.svg?branch=main&style=flat)
-![Tests](https://img.shields.io/badge/tests-8%20✓-success)
+![Tests](https://img.shields.io/badge/tests-9%20✓-success)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-success)
 ![Issues](https://img.shields.io/github/issues/zx80/proxy-pattern-pool?style=flat)
 ![Python](https://img.shields.io/badge/python-3-informational)
@@ -56,8 +56,11 @@ The `Proxy` constructors expects the following parameters:
   for `THREAD` and `VERSATILE` scopes.
 - `scope` object scope as defined by `Proxy.Scope`:
   - `SHARED` one shared object (process level)
-  - `THREAD` one object per thread
-  - `VERSATILE` one object per sub-thread (eg greenlets)
+  - `THREAD` one object per thread (`threading` implementation)
+  - `WERKZEUG` one object per greenlet (`werkzeug` implementation)
+  - `EVENTLET` one object per greenlet (`eventlet` implementation)
+  - `GEVENT` one object per greenlet (`gevent` implementation)
+  - `VERSATILE` same as `WERKZEUG`
   default is `SHARED` or `THREAD` depending on whether an object
   of a function was passed for the object.
 - `set_name` the name of a function to set the proxy contents,
@@ -153,6 +156,8 @@ See Also:
 
 - [Psycopg Pool](https://www.psycopg.org/psycopg3/docs/advanced/pool.html)
   for pooling Postgres database connexions.
+- [Eventlet db_pool](https://eventlet.net/doc/modules/db_pool.html)
+  for pooling MySQL or Postgres database connexions.
 - [Discussion](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
   about database pool sizing.
 
@@ -209,11 +214,6 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 
 ## TODO
 
-- greenlet, eventlet, or gevent?
-  - greenlet is a low-level interface which is used by eventlet.
-  - threading.local is ok for eventlet because they are considered different threads.
-  - however, there is a `eventlet.corolocal` (coroutine-local) thing.
-  - gevent is built upon libevent, and has `gevent.local`.
 - add a method to delete the proxy?
 - add an actual timeout feature?
 - how to manage a return automatically?

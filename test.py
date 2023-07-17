@@ -37,6 +37,7 @@ def test_proxy_threads():
     assert r._nobjs == 1
     assert isinstance(r._local.obj, str)
     assert r == "data: 0"
+
     # another thread
     def run(i):
         assert r == f"data: {i}"
@@ -214,3 +215,16 @@ def test_with():
         assert o == "Bla 0!"
     with prox._obj() as o:
         assert o == "Bla 0!"
+
+
+def test_local():
+    _scope = ppp.Proxy.Scope
+
+    for scope in (
+        _scope.THREAD,
+        _scope.WERKZEUG,
+        _scope.VERSATILE,
+        _scope.EVENTLET,
+        _scope.GEVENT,
+    ):
+        p = ppp.Proxy(fun=lambda s: scope, scope=scope)

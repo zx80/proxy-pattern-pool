@@ -28,6 +28,6 @@ package = "https://pypi.org/project/ProxyPatternPool/"
 py-modules = [ "ProxyPatternPool" ]
 
 [project.optional-dependencies]
-local = [ "werkzeug" ]
+local = [ "werkzeug", "eventlet", "gevent" ]
 dev = [ "mypy", "flake8", "black", "pytest", "coverage", "pymarkdownlnt" ]
 pub = [ "build", "wheel", "twine" ]

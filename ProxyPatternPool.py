@@ -263,6 +263,9 @@ class Proxy:
         SHARED = 1
         THREAD = 2
         VERSATILE = 3
+        WERKZEUG = 3
+        GEVENT = 4
+        EVENTLET = 5
 
     def __init__(
         self,
@@ -327,7 +330,8 @@ class Proxy:
         """Set current wrapped object generation function."""
         if self._scope == Proxy.Scope.AUTO:
             self._scope = Proxy.Scope.THREAD
-        assert self._scope in (Proxy.Scope.THREAD, Proxy.Scope.VERSATILE)
+        assert self._scope in (Proxy.Scope.THREAD, Proxy.Scope.VERSATILE,
+            Proxy.Scope.WERKZEUG, Proxy.Scope.EVENTLET, Proxy.Scope.GEVENT)
         self._fun = fun
         self._pool = Pool(fun,
                           max_size=self._pool_max_size,
@@ -339,12 +343,25 @@ class Proxy:
                           close=self._close) \
             if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0
+
+        # local implementtion
         if self._scope == Proxy.Scope.THREAD:
             self._local = threading.local()
-        else:  # Proxy.Scope.VERSATILE
+        elif self._scope == Proxy.Scope.WERKZEUG:
             from werkzeug.local import Local
 
             self._local = Local()
+        elif self._scope == Proxy.Scope.GEVENT:
+            from gevent.local import local
+
+            self._local = local()
+        elif self._scope == Proxy.Scope.EVENTLET:
+            from eventlet.corolocal import local
+
+            self._local = local()
+        else:  # pragma: no cover
+            raise Exception(f"unexpected local scope: {self._scope}")
+
         return self
 
     def _set(
