@@ -30,13 +30,13 @@ jobs:
         pip install -e .[local,dev]
     # Checks
     - name: Check with mypy
-      run: mypy --implicit-optional ProxyPatternPool.py
+      run: make check.mypy
     # - name: Check with black
     #  run: black --check ProxyPatternPool.py
     - name: Check with flake8
-      run: flake8 --ignore=E127,E227,E501,F401,E402 ProxyPatternPool.py
+      run: make check.flake8
     - name: Check with pytest
-      run: pytest --log-level=debug --capture=tee-sys test.py
+      run: make check.pytest
     - name: Check with coverage
       run: |
         coverage run -m pytest --log-level=debug --capture=tee-sys test.py
