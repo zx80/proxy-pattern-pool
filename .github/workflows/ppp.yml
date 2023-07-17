@@ -38,9 +38,6 @@ jobs:
     - name: Check with pytest
       run: make VENV= check.pytest
     - name: Check with coverage
-      run: |
-        make VENV= check.coverage
-        # coverage run -m pytest --log-level=debug --capture=tee-sys test.py
-        # coverage report --fail-under=100 --include=ProxyPatternPool.py
+      run: make VENV= check.coverage
     - name: Check with pymarkdown
       run: make VENV= check.pymarkdown
