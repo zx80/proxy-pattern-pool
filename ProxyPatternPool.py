@@ -352,11 +352,11 @@ class Proxy:
 
             self._local = Local()
         elif self._scope == Proxy.Scope.GEVENT:
-            from gevent.local import local
+            from gevent.local import local  # type: ignore
 
             self._local = local()
         elif self._scope == Proxy.Scope.EVENTLET:
-            from eventlet.corolocal import local
+            from eventlet.corolocal import local  # type: ignore
 
             self._local = local()
         else:  # pragma: no cover
