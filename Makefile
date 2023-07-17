@@ -4,6 +4,7 @@ SHELL	= /bin/bash
 .ONESHELL:
 
 MODULE	= ProxyPatternPool
+VENV    = venv
 
 F.md	= $(wildcard *.md)
 F.pdf	= $(F.md:%.md=%.pdf)
@@ -15,31 +16,31 @@ PYTEST	= pytest --log-level=debug --capture=tee-sys
 PYTOPT	=
 
 .PHONY: check check.mypy check.flake8 check.black check.pytest check.demo check.coverage check.pymarkdown
-check.mypy: venv
-	source venv/bin/activate
+check.mypy: $(VENV)
+	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	mypy --implicit-optional $(MODULE).py
 
-check.flake8: venv
-	source venv/bin/activate
+check.flake8: $(VENV)
+	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	# flake8 --ignore=E127,E402,E501,F401 $(MODULE).py
 	flake8 --ignore=E127,E128,E227,E402,E501 $(MODULE).py
 
-check.black: venv
-	source venv/bin/activate
+check.black: $(VENV)
+	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	black --check $(MODULE).py
 
-check.pytest: venv
-	source venv/bin/activate
+check.pytest: $(VENV)
+	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	$(PYTEST) $(PYTOPT) test.py
 
-check.coverage: venv
-	source venv/bin/activate
+check.coverage: $(VENV)
+	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	coverage run -m $(PYTEST) $(PYTOPT) test.py
 	coverage html $(MODULE).py
 	coverage report --fail-under=100 --include='*/$(MODULE).py'
 
-check.pymarkdown: venv
-	source venv/bin/activate
+check.pymarkdown: $(VENV)
+	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	pymarkdown scan $(F.md)
 
 check: check.mypy check.pymarkdown check.black check.flake8 check.pytest check.coverage
@@ -60,7 +61,7 @@ venv:
 	pip install -e .[dev,pub,local]
 
 # generate source and built distribution
-dist: venv
+dist: $(VENV)
 	$(PYTHON) -m build
 
 .PHONY: publish
