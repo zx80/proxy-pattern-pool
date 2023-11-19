@@ -62,6 +62,7 @@ venv:
 
 # generate source and built distribution
 dist: $(VENV)
+	source venv/bin/activate
 	$(PYTHON) -m build
 
 .PHONY: publish
