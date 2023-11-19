@@ -1,3 +1,4 @@
+import sys
 import time
 import threading
 import pytest
@@ -219,12 +220,17 @@ def test_with():
 
 def test_local():
     _scope = ppp.Proxy.Scope
-
-    for scope in (
+    scopes = [
         _scope.THREAD,
         _scope.WERKZEUG,
         _scope.VERSATILE,
         _scope.EVENTLET,
         _scope.GEVENT,
-    ):
+    ]
+
+    # temporary fix against "AttributeError: module 'ssl' has no attribute 'wrap_socket'"
+    if sys.version_info >= (3, 12, 0):
+        scopes = scopes[:-1]
+
+    for scope in scopes:
         p = ppp.Proxy(fun=lambda s: scope, scope=scope)
