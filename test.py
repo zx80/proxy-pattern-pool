@@ -230,7 +230,7 @@ def test_local():
 
     # temporary fix against "AttributeError: module 'ssl' has no attribute 'wrap_socket'"
     if sys.version_info >= (3, 12, 0):
-        scopes = scopes[:-1]
+        scopes = scopes[:-2]
 
     for scope in scopes:
         p = ppp.Proxy(fun=lambda s: scope, scope=scope)
