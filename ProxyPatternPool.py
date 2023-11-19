@@ -344,18 +344,18 @@ class Proxy:
             if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0
 
-        # local implementtion
+        # local implementation (*event coverage skip for 3.12)
         if self._scope == Proxy.Scope.THREAD:
             self._local = threading.local()
         elif self._scope == Proxy.Scope.WERKZEUG:
             from werkzeug.local import Local
 
             self._local = Local()
-        elif self._scope == Proxy.Scope.GEVENT:
+        elif self._scope == Proxy.Scope.GEVENT:  # pragma: no cover
             from gevent.local import local  # type: ignore
 
             self._local = local()
-        elif self._scope == Proxy.Scope.EVENTLET:
+        elif self._scope == Proxy.Scope.EVENTLET:  # pragma: no cover
             from eventlet.corolocal import local  # type: ignore
 
             self._local = local()
