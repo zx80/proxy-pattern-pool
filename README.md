@@ -174,6 +174,10 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
+### ? on ?
+
+Add Python _3.12_ tests.
+
 ### 6.0 on 2023-07-17
 
 Add support for more `local` scopes: `WERKZEUG`, `EVENTLET`, `GEVENT`.
