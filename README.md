@@ -174,7 +174,7 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
-### ? on ?
+### 6.1 on 2023-11-19
 
 Add Python _3.12_ tests.
 
