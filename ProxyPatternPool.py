@@ -198,6 +198,7 @@ class Pool:
 
     def get(self, timeout=None):
         """Get a object from the pool, possibly creating one if needed."""
+        # FIXME why while?
         while True:
             if self._sem:
                 # the acquired token will be released at the end of ret()
