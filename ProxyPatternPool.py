@@ -22,15 +22,24 @@ __version__ = pkg_version("ProxyPatternPool")
 log = logging.getLogger("ppp")
 
 
-class PoolException(Exception):
+class PPPException(Exception):
+    """Common class for ProxyPatternPool exceptions."""
     pass
 
 
+class PoolException(PPPException):
+    """Common class for Pool exceptions."""
+    pass
+
+
+# NOTE this does not include the time to create a resource
 class TimeOut(PoolException):
+    """Timeout while acquiring a resource at the pool level."""
     pass
 
 
-class ProxyException(Exception):
+class ProxyException(PPPException):
+    """Common class for Proxy exceptions."""
     pass
 
 
@@ -160,6 +169,7 @@ class Pool:
         log.debug(f"creating new obj with {self._fun}")
         with self._lock:
             if self._max_size and self._nobjs >= self._max_size:  # pragma: no cover
+                # this should not be raised thanks to the semaphore
                 raise PoolException(f"pool max size {self._max_size} reached")
             obj = self._fun(self._ncreated)
             self._ncreated += 1
@@ -190,6 +200,7 @@ class Pool:
         """Get a object from the pool, possibly creating one if needed."""
         while True:
             if self._sem:
+                # the acquired token will be released at the end of ret()
                 if not self._sem.acquire(timeout=timeout if timeout else self._timeout):
                     raise TimeOut(f"timeout after {timeout}")
             with self._lock:
@@ -216,13 +227,14 @@ class Pool:
                 self._uses[obj].last_ret = self._now()
                 self._avail.add(obj)
             if self._sem:
+                # release token acquired in get()
                 self._sem.release()
 
     @contextmanager
     def obj(self, timeout=None):
         """Extract one object from the pool in a `with` scope."""
         try:
-            o = self.get()
+            o = self.get(timeout)
             yield o
         finally:
             self.ret(o)
