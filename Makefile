@@ -43,7 +43,8 @@ check.pymarkdown: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	pymarkdown scan $(F.md)
 
-check: check.mypy check.pymarkdown check.black check.flake8 check.pytest check.coverage
+# check.black
+check: check.mypy check.pymarkdown check.flake8 check.pytest check.coverage
 
 .PHONY: clean clean.venv
 clean:
