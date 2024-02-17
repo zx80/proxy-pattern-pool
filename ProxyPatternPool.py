@@ -56,6 +56,7 @@ class Pool:
     - max_using_delay_kill: kill if object is kept for more than this time, 0.0 for no killing.
     - close: name of "close" method to call, if any.
     - log_level: set logging level for local logger.
+    - tracer: generate debug information.
     """
 
     @dataclass
@@ -77,9 +78,14 @@ class Pool:
         close: str|None = None,
         max_delay: float = 0.0,  # temporary upward compatibility
         log_level: int|None = None,
+        tracer: Callable[[Any], str]|None = None,
     ):
+        # debugging
+        self._log_level = log_level
         if log_level is not None:
             log.setLevel(log_level)
+        self._tracer = tracer
+        # objects
         self._fun = fun
         self._nobjs = 0  # current number of objects
         self._nuses = 0  # currenly in use
@@ -123,7 +129,7 @@ class Pool:
 
     def __str__(self):
         o, u, a, i = self._nobjs, self._nuses, len(self._avail), len(self._using)
-        return f"objs={o} uses={u} avail={a} using={i}"
+        return f"objs={o} uses={u} avail={a} using={i} sem={self._sem}"
 
     def _now(self) -> float:
         """Return now as a convenient float, in seconds."""
@@ -135,7 +141,13 @@ class Pool:
         while True:
             time.sleep(self._delay)
             with self._lock:
-                log.debug(str(self))
+                if self._log_level == logging.DEBUG:
+                    log.debug(str(self))
+                    if self._tracer:
+                        for obj in self._avail:
+                            log.debug(f"avail: {self._tracer(obj)}")
+                        for obj in self._using:
+                            log.debug(f"using: {self._tracer(obj)}")
                 now = self._now()
                 if self._max_using_delay_warn:
                     # kill long running objects
@@ -303,6 +315,7 @@ class Proxy:
         # temporary backward compatibility
         max_delay: float = 0.0,
         log_level: int|None = None,
+        tracer: Callable[[Any], str]|None = None,
     ):
         """Constructor parameters:
 
@@ -319,6 +332,7 @@ class Proxy:
         - scope: level of sharing, default is to chose between SHARED and THREAD.
         - close: "close" method, if any.
         - log_level: set logging level for local logger.
+        - tracer: generate debug information.
         """
         # scope encodes the expected object unicity or multiplicity
         if log_level is not None:
@@ -334,7 +348,8 @@ class Proxy:
         self._pool_max_using_delay = max_using_delay
         self._pool_max_using_delay_kill = max_using_delay_kill
         self._pool_timeout = timeout
-        self._close = close
+        self._pool_tracer = tracer
+        self._pool_close = close
         self._set(obj=obj, fun=fun, mandatory=False)
         if set_name and set_name != "_set":
             setattr(self, set_name, self._set)
@@ -367,8 +382,9 @@ class Proxy:
                           max_avail_delay=self._pool_max_avail_delay,
                           max_using_delay=self._pool_max_using_delay,
                           max_using_delay_kill=self._pool_max_using_delay_kill,
-                          close=self._close) \
-            if self._pool_max_size is not None else None  # fmt: skip
+                          close=self._pool_close,
+                          tracer=self._pool_tracer,
+            ) if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0
 
         # local implementation (*event coverage skip for 3.12)

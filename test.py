@@ -138,6 +138,7 @@ def test_proxy_pool_threads():
 def test_pool_direct():
     # test max_use
     pool = ppp.Pool(fun=lambda i: i, max_size=1, max_use=2)
+    assert len(str(pool)) >= 10
     i = pool.get()
     assert i == 0
     pool.ret(i)
@@ -178,17 +179,19 @@ def test_pool_class():
 
 def test_pool_delay():
     # available delay
-    pool = ppp.Pool(fun=lambda n: n, max_size=0, max_avail_delay=0.4)
+    pool = ppp.Pool(fun=lambda n: n, max_size=0, max_avail_delay=0.4, log_level=logging.DEBUG, tracer=str)
     t1, t2 = pool.get(), pool.get()
     assert pool._nobjs == 2 and pool._nuses == 2
     pool.ret(t1)
     pool.ret(t2)
     assert pool._nobjs == 2
+    t1 = pool.get()
     # allow several rounds…
     time.sleep(1.7)
     assert pool._nobjs == 1
+    pool.ret(t1)
     t1, t2 = pool.get(), pool.get()
-    assert pool._nobjs == 2 and pool._nuses == 4
+    assert pool._nobjs == 2 and pool._nuses == 5
     pool.ret(t1)
     pool.ret(t2)
     pool.__delete__()

@@ -84,6 +84,7 @@ The `Proxy` constructors expects the following parameters:
 - `close` name of the function to call when discarding an object,
   default is *None* means nothing is called.
 - `log_level` set logging level, default *None* means no setting.
+- `tracer` object debug helper, default *None* means less debug.
 
 When `max_size` is not *None*, a `Pool` is created to store the created
 objects so as to reuse them. It is the responsability of the user to
@@ -104,6 +105,7 @@ Its constructor expects the following parameters:
 - `max_using_delay_kill` when to kill objects kept for a long time.
 - `close` method to call when discarding an object, default is *None*.
 - `log_level` set logging level, default *None* means no setting.
+- `tracer` object debug helper, default *None* means less debug.
 
 Objects are created on demand by calling `fun` when needed.
 
@@ -183,6 +185,10 @@ This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/)
 are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
+
+### 7.3 on 2024-02-17
+
+Add `tracer` parameter to help debugging on pool objects.
 
 ### 7.2 on 2024-02-17
 
