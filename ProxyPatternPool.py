@@ -128,25 +128,22 @@ class Pool:
         while True:
             time.sleep(self._delay)
             log.debug(str(self))
-            if self._nobjs <= self._min_size and not self._max_using_delay:
+            if self._nobjs <= self._min_size and not self._max_using_delay and not self._max_avail_delay:  # pragma: no cover
                 # nothing to do this round
                 continue
             with self._lock:
                 now = self._now()
-                if self._max_using_delay:
-                    # warn about long running objects
-                    long_running, long_time = 0, 0.0
+                if self._max_using_delay:  # kill long running objects
+                    long_run, long_time = 0, 0.0
                     for obj in list(self._using):
                         if now - self._uses[obj].last_get >= self._max_using_delay:
-                            long_running += 1
+                            long_run += 1
                             long_time += now - self._uses[obj].last_get
-                    if long_running:
-                        # TODO what to do about these? force return?
-                        log.warning(
-                            f"long running objects: {long_running} ({long_time / long_running})"
-                        )
-                if self._max_avail_delay:
-                    # close objects unused for too long
+                            self._del(obj)
+                    if long_run:
+                        log.warning(f"killed {long_run} long running objects ({long_time / long_run})")
+                if self._max_avail_delay and self._nobjs > self._min_size:
+                    # close spurious objects unused for too long
                     for obj in list(self._avail):
                         if now - self._uses[obj].last_ret >= self._max_avail_delay:
                             self._del(obj)

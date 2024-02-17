@@ -37,7 +37,7 @@ check.coverage: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	coverage run -m $(PYTEST) $(PYTOPT) test.py
 	coverage html $(MODULE).py
-	coverage report --fail-under=100 --include='*/$(MODULE).py'
+	coverage report --fail-under=100 --show-missing --include='*/$(MODULE).py'
 
 check.pymarkdown: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
