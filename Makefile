@@ -15,35 +15,46 @@ PYTHON	= python
 PYTEST	= pytest --log-level=debug --capture=tee-sys
 PYTOPT	=
 
-.PHONY: check check.mypy check.flake8 check.black check.pytest check.demo check.coverage check.pymarkdown
+.PHONY: check.mypy
 check.mypy: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	mypy --implicit-optional $(MODULE).py
 
+.PHONY: check.pyright
+check.pyright: $(VENV)
+	[ "$(VENV)" ] && source $(VENV)/bin/activate
+	pyright $(MODULE).py
+
+.PHONY: check.flake8
 check.flake8: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	# flake8 --ignore=E127,E402,E501,F401 $(MODULE).py
 	flake8 --ignore=E127,E128,E227,E402,E501 $(MODULE).py
 
+.PHONY: check.black
 check.black: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	black --check $(MODULE).py
 
+.PHONY: check.pytest
 check.pytest: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	$(PYTEST) $(PYTOPT) test.py
 
+.PHONY: check.coverage
 check.coverage: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	coverage run -m $(PYTEST) $(PYTOPT) test.py
 	coverage html $(MODULE).py
 	coverage report --fail-under=100 --show-missing --include='*/$(MODULE).py'
 
+.PHONY: check.pymarkdown
 check.pymarkdown: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	pymarkdown scan $(F.md)
 
-# check.black
+# check.black check.pyright
+.PHONY: check
 check: check.mypy check.pymarkdown check.flake8 check.pytest check.coverage
 
 .PHONY: clean clean.venv
