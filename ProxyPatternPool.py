@@ -123,7 +123,7 @@ class Pool:
 
     def __str__(self):
         o, u, a, i = self._nobjs, self._nuses, len(self._avail), len(self._using)
-        return f"o={o} u={u} a={a} i={i}"
+        return f"objs={o} uses={u} avail={a} using={i}"
 
     def _now(self) -> float:
         """Return now as a convenient float, in seconds."""
