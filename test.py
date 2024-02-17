@@ -13,7 +13,7 @@ log = logging.getLogger("tests")
 
 def test_proxy_direct():
     v1, v2 = "hello!", "world!"
-    r1 = ppp.Proxy(close="close")
+    r1 = ppp.Proxy(close="close", log_level=logging.INFO)
     r1.set(v1)
     assert r1 == v1 and not r1 != v1
     assert r1.startswith("hell")
@@ -214,7 +214,7 @@ def test_pool_delay():
 
 
 def test_with():
-    pool = ppp.Pool(fun=lambda n: f"Foo {n}!", min_size=0, max_size=2)
+    pool = ppp.Pool(fun=lambda n: f"Foo {n}!", min_size=0, max_size=2, log_level=logging.INFO)
     with pool.obj() as o:
         assert o == "Foo 0!"
     t = pool.get()

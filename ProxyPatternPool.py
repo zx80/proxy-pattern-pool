@@ -55,6 +55,7 @@ class Pool:
     - max_using_delay: warn if object is kept for more than this time, 0.0 for no warning.
     - max_using_delay_kill: kill if object is kept for more than this time, 0.0 for no killing.
     - close: name of "close" method to call, if any.
+    - log_level: set logging level for local logger.
     """
 
     @dataclass
@@ -68,14 +69,17 @@ class Pool:
         fun: Callable[[int], Any],
         max_size: int = 0,
         min_size: int = 1,
-        timeout: float = None,
+        timeout: float|None = None,
         max_use: int = 0,
         max_avail_delay: float = 0.0,
         max_using_delay: float = 0.0,
         max_using_delay_kill: float = 0.0,
         close: str|None = None,
         max_delay: float = 0.0,  # temporary upward compatibility
+        log_level: int|None = None,
     ):
+        if log_level is not None:
+            log.setLevel(log_level)
         self._fun = fun
         self._nobjs = 0  # current number of objects
         self._nuses = 0  # currenly in use
@@ -286,18 +290,19 @@ class Proxy:
         self,
         obj: Any = None,
         set_name: str = "set",
-        fun: Callable[[int], Any] = None,
+        fun: Callable[[int], Any]|None = None,
         max_size: int = 0,
         min_size: int = 1,
         max_use: int = 0,
         max_avail_delay: float = 0.0,
         max_using_delay: float = 0.0,
         max_using_delay_kill: float = 0.0,
-        timeout: float = None,
+        timeout: float|None = None,
         scope: Scope = Scope.AUTO,
         close: str|None = None,
         # temporary backward compatibility
         max_delay: float = 0.0,
+        log_level: int|None = None,
     ):
         """Constructor parameters:
 
@@ -313,8 +318,11 @@ class Proxy:
         - timeout: when pooling, how long to wait for an object.
         - scope: level of sharing, default is to chose between SHARED and THREAD.
         - close: "close" method, if any.
+        - log_level: set logging level for local logger.
         """
         # scope encodes the expected object unicity or multiplicity
+        if log_level is not None:
+            log.setLevel(log_level)
         self._scope = (
             Proxy.Scope.SHARED if scope == Proxy.Scope.AUTO and obj else
             Proxy.Scope.THREAD if scope == Proxy.Scope.AUTO and fun else
