@@ -77,7 +77,9 @@ The `Proxy` constructors expects the following parameters:
   default is *0* which means unlimited.
 - `max_avail_delay` after which unused objects are discarded.
   default is *0.0* which means unlimited.
-- `max_using_delay` kill objects being used for too long.
+- `max_using_delay` warn about objects being used for too long.
+  default is *0.0* which means no warning.
+- `max_using_delay_kill` kill objects being used for too long.
   default is *0.0* which means no killing.
 - `close` name of the function to call when discarding an object,
   default is *None* means nothing is called.
@@ -98,6 +100,7 @@ Its constructor expects the following parameters:
 - `max_use` after how many usage to discard an object.
 - `max_avail_delay` when to discard an unused object.
 - `max_using_delay` when to warn about object kept for a long time.
+- `max_using_delay_kill` when to kill objects kept for a long time.
 - `close` method to call when discarding an object, default is *None*.
 
 Objects are created on demand by calling `fun` when needed.
@@ -178,6 +181,10 @@ This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/)
 are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
+
+### 7.1 on 2024-02-17
+
+On second thought, allow both warning and killing long running objects.
 
 ### 7.0 on 2024-02-17
 

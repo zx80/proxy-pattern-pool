@@ -201,6 +201,16 @@ def test_pool_delay():
     time.sleep(0.3)
     pool.ret(t2)
     pool.__delete__()
+    # warning
+    pool = ppp.Pool(fun=lambda n: f"Hi {n}!", max_using_delay=1.0, max_using_delay_kill=0.1)
+    # kill
+    pool = ppp.Pool(fun=lambda n: f"Ciao {n}!", max_using_delay=0.1, max_using_delay_kill=0.3)
+    t1, t2 = pool.get(), pool.get()
+    assert pool._nobjs == 2
+    time.sleep(0.2)  # warnings
+    pool.ret(t1)
+    time.sleep(0.3)  # kill
+    assert pool._nobjs == 1
 
 
 def test_with():

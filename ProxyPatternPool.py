@@ -52,7 +52,8 @@ class Pool:
     - timeout: give-up waiting after this time, None for no timeout.
     - max_use: how many times to use a something, 0 for unlimited.
     - max_avail_delay: remove objects if unused for this secs, 0.0 for unlimited.
-    - max_using_delay: warn if object is keept for more than this time, 0.0 for no warning.
+    - max_using_delay: warn if object is kept for more than this time, 0.0 for no warning.
+    - max_using_delay_kill: kill if object is kept for more than this time, 0.0 for no killing.
     - close: name of "close" method to call, if any.
     """
 
@@ -71,21 +72,23 @@ class Pool:
         max_use: int = 0,
         max_avail_delay: float = 0.0,
         max_using_delay: float = 0.0,
+        max_using_delay_kill: float = 0.0,
         close: str|None = None,
-        # temporary upward compatibility
-        max_delay: float = 0.0,
+        max_delay: float = 0.0,  # temporary upward compatibility
     ):
-        # data attributes
         self._fun = fun
-        self._nobjs = 0
-        self._nuses = 0
-        self._ncreated = 0
+        self._nobjs = 0  # current number of objects
+        self._nuses = 0  # currenly in use
+        self._ncreated = 0  # total created
         self._max_size = max_size
         self._min_size = min_size
         self._timeout = timeout
-        self._max_use = max_use
+        self._max_use = max_use  # when to recycle
         self._max_avail_delay = max_avail_delay or max_delay
-        self._max_using_delay = max_using_delay
+        self._max_using_delay_kill = max_using_delay_kill
+        self._max_using_delay_warn = max_using_delay or max_using_delay_kill
+        if self._max_using_delay_kill and self._max_using_delay_warn > self._max_using_delay_kill:
+            log.warning(f"inconsistent max_using_delay_warn > max_using_delay_kill")
         self._close = close
         # pool's content: available vs in use objects
         self._avail: set[Any] = set()
@@ -102,11 +105,11 @@ class Pool:
             self._new()
         # start housekeeper thread if needed
         self._housekeeper: threading.Thread|None = None
-        if self._max_avail_delay or self._max_using_delay:
+        if self._max_avail_delay or self._max_using_delay_warn:
             self._delay = self._max_avail_delay
             if not self._delay or \
-               self._max_using_delay and self._delay > self._max_using_delay:  # fmt: skip
-                self._delay = self._max_using_delay
+               self._max_using_delay_warn and self._delay > self._max_using_delay_warn:  # fmt: skip
+                self._delay = self._max_using_delay_warn
             self._delay /= 2.0
         else:
             self._delay = 0.0
@@ -127,21 +130,23 @@ class Pool:
         log.info(f"housekeeper running every {self._delay}")
         while True:
             time.sleep(self._delay)
-            log.debug(str(self))
-            if self._nobjs <= self._min_size and not self._max_using_delay and not self._max_avail_delay:  # pragma: no cover
-                # nothing to do this round
-                continue
             with self._lock:
+                log.debug(str(self))
                 now = self._now()
-                if self._max_using_delay:  # kill long running objects
-                    long_run, long_time = 0, 0.0
+                if self._max_using_delay_warn:
+                    # kill long running objects
+                    long_run, long_kill, long_time = 0, 0, 0.0
                     for obj in list(self._using):
-                        if now - self._uses[obj].last_get >= self._max_using_delay:
+                        running = now - self._uses[obj].last_get
+                        if running >= self._max_using_delay_warn:
+                            long_time += running
                             long_run += 1
-                            long_time += now - self._uses[obj].last_get
+                        if self._max_using_delay_kill and running >= self._max_using_delay_kill:
                             self._del(obj)
-                    if long_run:
-                        log.warning(f"killed {long_run} long running objects ({long_time / long_run})")
+                            long_kill += 1
+                    if long_run or long_kill:
+                        delay = (long_time / long_run) if long_run else 0.0
+                        log.warning(f"long running objects: {long_run} ({delay} seconds, {long_kill} killed)")
                 if self._max_avail_delay and self._nobjs > self._min_size:
                     # close spurious objects unused for too long
                     for obj in list(self._avail):
@@ -287,6 +292,7 @@ class Proxy:
         max_use: int = 0,
         max_avail_delay: float = 0.0,
         max_using_delay: float = 0.0,
+        max_using_delay_kill: float = 0.0,
         timeout: float = None,
         scope: Scope = Scope.AUTO,
         close: str|None = None,
@@ -303,6 +309,7 @@ class Proxy:
         - max_use: when pooling, how many times to reuse an object.
         - max_avail_delay: when pooling, when to discard an unused object.
         - max_using_delay: when pooling, warn about long uses.
+        - max_using_delay_kill: when pooling, kill long uses.
         - timeout: when pooling, how long to wait for an object.
         - scope: level of sharing, default is to chose between SHARED and THREAD.
         - close: "close" method, if any.
@@ -317,6 +324,7 @@ class Proxy:
         self._pool_max_use = max_use
         self._pool_max_avail_delay = max_avail_delay or max_delay
         self._pool_max_using_delay = max_using_delay
+        self._pool_max_using_delay_kill = max_using_delay_kill
         self._pool_timeout = timeout
         self._close = close
         self._set(obj=obj, fun=fun, mandatory=False)
@@ -350,6 +358,7 @@ class Proxy:
                           max_use=self._pool_max_use,
                           max_avail_delay=self._pool_max_avail_delay,
                           max_using_delay=self._pool_max_using_delay,
+                          max_using_delay_kill=self._pool_max_using_delay_kill,
                           close=self._close) \
             if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0
