@@ -81,7 +81,6 @@ class Pool:
         tracer: Callable[[Any], str]|None = None,
     ):
         # debugging
-        self._log_level = log_level
         if log_level is not None:
             log.setLevel(log_level)
         self._tracer = tracer
@@ -141,7 +140,7 @@ class Pool:
         while True:
             time.sleep(self._delay)
             with self._lock:
-                if self._log_level == logging.DEBUG:
+                if log.getEffectiveLevel() == logging.DEBUG:
                     log.debug(str(self))
                     if self._tracer:
                         for obj in self._avail:

@@ -186,6 +186,10 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
+### 7.4 on 2024-02-17
+
+Fix `log_level` handling.
+
 ### 7.3 on 2024-02-17
 
 Add `tracer` parameter to help debugging on pool objects.
