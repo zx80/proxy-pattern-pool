@@ -152,6 +152,11 @@ parallel language, so the point of creating threads which will mostly not really
 run in parallel is moot, thus the point of having a clever pool of stuff to be
 shared by these thread is even mooter!
 
+Shared object *must* be returned to the pool to avoid depleting resources.
+This may require some active cooperation from the infrastructure which may
+or may not be reliable. Consider monitoring your resources to detect unexpected
+status, eg database connections remaining  _idle in transaction_ and the like.
+
 See Also:
 
 - [Psycopg Pool](https://www.psycopg.org/psycopg3/docs/advanced/pool.html)
