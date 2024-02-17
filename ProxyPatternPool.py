@@ -383,8 +383,8 @@ class Proxy:
                           max_using_delay=self._pool_max_using_delay,
                           max_using_delay_kill=self._pool_max_using_delay_kill,
                           close=self._pool_close,
-                          tracer=self._pool_tracer,
-            ) if self._pool_max_size is not None else None  # fmt: skip
+                          tracer=self._pool_tracer) \
+            if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0
 
         # local implementation (*event coverage skip for 3.12)
