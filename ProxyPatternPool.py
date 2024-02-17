@@ -88,7 +88,7 @@ class Pool:
         self._max_using_delay_kill = max_using_delay_kill
         self._max_using_delay_warn = max_using_delay or max_using_delay_kill
         if self._max_using_delay_kill and self._max_using_delay_warn > self._max_using_delay_kill:
-            log.warning(f"inconsistent max_using_delay_warn > max_using_delay_kill")
+            log.warning("inconsistent max_using_delay_warn > max_using_delay_kill")
         self._close = close
         # pool's content: available vs in use objects
         self._avail: set[Any] = set()
