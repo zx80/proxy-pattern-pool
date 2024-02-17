@@ -184,10 +184,10 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
-### ? on ?
+### 7.2 on 2024-02-17
 
 Add `log_level` parameter.
-Add `pyright` check.
+Add `pyright` (non yet working) check.
 
 ### 7.1 on 2024-02-17
 
