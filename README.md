@@ -195,6 +195,10 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
+### ? on ?
+
+Show more pool data.
+
 ### 8.0 on 2024-02-20
 
 Add `opener`, `getter`, `retter` and `closer` pool hooks.

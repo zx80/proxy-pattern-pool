@@ -143,8 +143,8 @@ class Pool:
             self._housekeeper.start()
 
     def __str__(self):
-        o, u, a, i = self._nobjs, self._nuses, len(self._avail), len(self._using)
-        return f"objs={o} uses={u} avail={a} using={i} sem={self._sem}"
+        a, i = len(self._avail), len(self._using)
+        return f"objs={self._nobjs} created={self._ncreated} uses={self._nuses} avail={a} using={i} sem={self._sem}"
 
     def _now(self) -> float:
         """Return now as a convenient float, in seconds."""
