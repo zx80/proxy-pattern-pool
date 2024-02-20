@@ -21,6 +21,8 @@ __version__ = pkg_version("ProxyPatternPool")
 
 log = logging.getLogger("ppp")
 
+PoolHook = Callable[[Any], None]|None
+
 
 class PPPException(Exception):
     """Common class for ProxyPatternPool exceptions."""
@@ -54,9 +56,13 @@ class Pool:
     - max_avail_delay: remove objects if unused for this secs, 0.0 for unlimited.
     - max_using_delay: warn if object is kept for more than this time, 0.0 for no warning.
     - max_using_delay_kill: kill if object is kept for more than this time, 0.0 for no killing.
-    - close: name of "close" method to call, if any.
+    - opener: hook called on object creation.
+    - getter: hook called on object pool extraction.
+    - retter: hook called on object pool return.
+    - closer: hook called on object destruction.
     - log_level: set logging level for local logger.
-    - tracer: generate debug information.
+    - tracer: generate debug information on an object.
+    - close: name of method for closer.
     """
 
     @dataclass
@@ -68,6 +74,7 @@ class Pool:
     def __init__(
         self,
         fun: Callable[[int], Any],
+        # named parameters
         max_size: int = 0,
         min_size: int = 1,
         timeout: float|None = None,
@@ -75,10 +82,14 @@ class Pool:
         max_avail_delay: float = 0.0,
         max_using_delay: float = 0.0,
         max_using_delay_kill: float = 0.0,
-        close: str|None = None,
         max_delay: float = 0.0,  # temporary upward compatibility
-        log_level: int|None = None,
+        opener: PoolHook = None,
+        getter: PoolHook = None,
+        retter: PoolHook = None,
+        closer: PoolHook = None,
+        close: str|None = None,  # temporary upward compatibility
         tracer: Callable[[Any], str]|None = None,
+        log_level: int|None = None,
     ):
         # debugging
         if log_level is not None:
@@ -98,7 +109,12 @@ class Pool:
         self._max_using_delay_warn = max_using_delay or max_using_delay_kill
         if self._max_using_delay_kill and self._max_using_delay_warn > self._max_using_delay_kill:
             log.warning("inconsistent max_using_delay_warn > max_using_delay_kill")
-        self._close = close
+        # method hooks
+        assert not (close and closer), "cannot mix close and closer parameters"
+        self._opener = opener
+        self._getter = getter
+        self._retter = retter
+        self._closer = (lambda o: getattr(o, close)()) if close else closer
         # pool's content: available vs in use objects
         self._avail: set[Any] = set()
         self._using: set[Any] = set()
@@ -194,22 +210,27 @@ class Pool:
             self._avail.add(obj)
             now = self._now()
             self._uses[obj] = Pool.UseInfo(0, now, now)
+            if self._opener:
+                try:
+                    self._opener(obj)
+                except Exception as e:
+                    log.error(f"exception in opener: {e}")
             return obj
 
     def _del(self, obj):
         """Destroy this object."""
         with self._lock:
-            if self._close and hasattr(obj, self._close):
-                try:
-                    getattr(obj, self._close)()
-                except Exception as e:
-                    log.error(f"exception on {self._close}(): {e}")
             if obj in self._uses:
                 del self._uses[obj]
             if obj in self._avail:
                 self._avail.remove(obj)
             if obj in self._using:  # pragma: no cover
                 self._using.remove(obj)
+            if self._closer:
+                try:
+                    self._closer(obj)
+                except Exception as e:
+                    log.error(f"exception in closer: {e}")
             del obj
             self._nobjs -= 1
 
@@ -225,6 +246,11 @@ class Pool:
                 if len(self._avail) == 0:
                     self._new()
                 obj = self._avail.pop()
+                if self._getter:
+                    try:
+                        self._getter(obj)
+                    except Exception as e:
+                        log.error(f"exception in getter: {e}")
                 self._using.add(obj)
                 self._nuses += 1
                 self._uses[obj].uses += 1
@@ -235,7 +261,13 @@ class Pool:
         """Return object to pool."""
         with self._lock:
             if obj not in self._using:
+                # FIXME issue a warning?
                 return
+            if self._retter:
+                try:
+                    self._retter(obj)
+                except Exception as e:
+                    log.error(f"exception in retter: {e}")
             self._using.remove(obj)
             if self._max_use and self._uses[obj].uses >= self._max_use:
                 self._del(obj)
@@ -310,11 +342,16 @@ class Proxy:
         max_using_delay_kill: float = 0.0,
         timeout: float|None = None,
         scope: Scope = Scope.AUTO,
+        # hooks
+        opener: PoolHook = None,
+        getter: PoolHook = None,
+        retter: PoolHook = None,
+        closer: PoolHook = None,
         close: str|None = None,
+        tracer: Callable[[Any], str]|None = None,
         # temporary backward compatibility
         max_delay: float = 0.0,
         log_level: int|None = None,
-        tracer: Callable[[Any], str]|None = None,
     ):
         """Constructor parameters:
 
@@ -348,7 +385,10 @@ class Proxy:
         self._pool_max_using_delay_kill = max_using_delay_kill
         self._pool_timeout = timeout
         self._pool_tracer = tracer
-        self._pool_close = close
+        self._pool_opener = opener
+        self._pool_getter = getter
+        self._pool_retter = retter
+        self._pool_closer = (lambda o: getattr(o, close)()) if close else closer
         self._set(obj=obj, fun=fun, mandatory=False)
         if set_name and set_name != "_set":
             setattr(self, set_name, self._set)
@@ -381,7 +421,10 @@ class Proxy:
                           max_avail_delay=self._pool_max_avail_delay,
                           max_using_delay=self._pool_max_using_delay,
                           max_using_delay_kill=self._pool_max_using_delay_kill,
-                          close=self._pool_close,
+                          opener=self._pool_opener,
+                          getter=self._pool_getter,
+                          retter=self._pool_retter,
+                          closer=self._pool_closer,
                           tracer=self._pool_tracer) \
             if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0

@@ -3,7 +3,7 @@
 Generic Proxy and Pool Classes for Python.
 
 ![Status](https://github.com/zx80/proxy-pattern-pool/actions/workflows/ppp.yml/badge.svg?branch=main&style=flat)
-![Tests](https://img.shields.io/badge/tests-9%20✓-success)
+![Tests](https://img.shields.io/badge/tests-10%20✓-success)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-success)
 ![Issues](https://img.shields.io/github/issues/zx80/proxy-pattern-pool?style=flat)
 ![Python](https://img.shields.io/badge/python-3-informational)
@@ -81,7 +81,13 @@ The `Proxy` constructors expects the following parameters:
   default is *0.0* which means no warning.
 - `max_using_delay_kill` kill objects being used for too long.
   default is *0.0* which means no killing.
-- `close` name of the function to call when discarding an object,
+- `opener` function to call when creating an object.
+  default is *None* means nothing is called.
+- `getter` function to call when getting an object.
+  default is *None* means nothing is called.
+- `retter` function to call when returning an object.
+  default is *None* means nothing is called.
+- `closer` function to call when discarding an object.
   default is *None* means nothing is called.
 - `log_level` set logging level, default *None* means no setting.
 - `tracer` object debug helper, default *None* means less debug.
@@ -103,8 +109,11 @@ Its constructor expects the following parameters:
 - `max_avail_delay` when to discard an unused object.
 - `max_using_delay` when to warn about object kept for a long time.
 - `max_using_delay_kill` when to kill objects kept for a long time.
-- `close` method to call when discarding an object, default is *None*.
 - `log_level` set logging level, default *None* means no setting.
+- `opener` function to call when creating an object, default *None* means no call.
+- `getter` function to call when getting an object, default *None* means no call.
+- `retter` function to call when returning an object, default *None* means no call.
+- `closer` function to call when discarding an object, default *None* means no call.
 - `tracer` object debug helper, default *None* means less debug.
 
 Objects are created on demand by calling `fun` when needed.
@@ -185,6 +194,10 @@ This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/)
 are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
+
+### 8.0 on 2024-02-20
+
+Add `opener`, `getter`, `retter` and `closer` pool hooks.
 
 ### 7.4 on 2024-02-17
 

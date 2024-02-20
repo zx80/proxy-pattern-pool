@@ -247,3 +247,19 @@ def test_local():
 
     for scope in scopes:
         p = ppp.Proxy(fun=lambda s: scope, scope=scope)
+
+
+# test opener/getter/retter/closer
+def test_ogrc():
+    def trace(s, o):
+        log.debug(f"{o}: {s}")
+        raise Exception("{s} coverage!")
+    pool = ppp.Pool(fun=lambda n: f"ogrc {n}!",
+                    min_size=0, max_size=5,
+                    opener=lambda o: trace("open", o),
+                    getter=lambda o: trace("get", o),
+                    retter=lambda o: trace("ret", o),
+                    closer=lambda o: trace("close", o))
+    t1, t2 = pool.get(), pool.get()
+    pool.ret(t1)
+    pool.ret(t2)
