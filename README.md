@@ -127,7 +127,7 @@ First, a shared module holds a proxy to a yet unknown object:
 
 ```python
 # file "Shared.py"
-from ProxyPatternPool import Proxy 
+from ProxyPatternPool import Proxy
 stuff = Proxy()
 def init_app(stuff):
     stuff.set_obj(stuff)
@@ -198,6 +198,8 @@ Install [package](https://pypi.org/project/ProxyPatternPool/) from
 ### ? on ?
 
 Show more pool data.
+Improve overall resilience in case of various errors.
+Improve `Pool` documentation.
 
 ### 8.0 on 2024-02-20
 

@@ -63,6 +63,33 @@ class Pool:
     - log_level: set logging level for local logger.
     - tracer: generate debug information on an object.
     - close: name of method for closer.
+
+    The object life cycle is the following, with the corresponding hooks:
+
+    - objects are created by calling ``fun``, after which ``opener`` is called.
+    - when an object is extracted from the pool, ``getter`` is called.
+    - when an object is returned to the pool, ``retter` is called.
+    - when an object is removed from the pool, ``closer`` is called.
+
+    Objects are created:
+
+    - when the number of available object is below ``min_size``.
+    - when an object is requested, none is available, and the number of objects
+      is below ``max_size``.
+
+    Objects are destroyed:
+
+    - when they are unused for too long (``max_avail_delay``) and if the number
+      of objects is strictly over ``min_size``.
+    - when they are being used for too long (over ``max_using_delay_kill``).
+    - when they reach the number of uses limit (``max_use``).
+    - when ``__delete__`` is called.
+
+    This infrastructure is not suitable for handling very short timeouts, and
+    will not be very precise. A timeout is expensive as the object is
+    effectively destroyed (so for instance an underlying connection would be
+    lost) and will have to be re-created. This is not a replacement for a
+    careful design and monitoring of an application use of resources.
     """
 
     @dataclass
@@ -173,7 +200,10 @@ class Pool:
                             long_time += running
                             long_run += 1
                         if self._max_using_delay_kill and running >= self._max_using_delay_kill:
+                            # we cannot just return the object because another thread may keep on using it.
                             self._del(obj)
+                            if self._sem:  # pragma: no cover
+                                self._sem.release()
                             long_kill += 1
                     if long_run or long_kill:
                         delay = (long_time / long_run) if long_run else 0.0
@@ -186,16 +216,22 @@ class Pool:
                             # stop deleting objects if min size is reached
                             if self._nobjs <= self._min_size:
                                 break
+                # create new objects if below min_size
+                while self._nobjs < self._min_size:
+                    self._new()
 
     def __delete__(self):
         """This should be done automatically, but eventually."""
         with self._lock:
-            # using should be empty
-            self._using.clear()
-            self._uses.clear()
+            if self._using:  # pragma: no cover
+                log.warning(f"deleting in-use objects: {len(self._using)}")
+                for obj in list(self._using):
+                    self._del(obj)
+                self._using.clear()
             for obj in list(self._avail):
                 self._del(obj)
             self._avail.clear()
+            self._uses.clear()
 
     def _new(self):
         """Create a new available object."""
@@ -238,13 +274,19 @@ class Pool:
         """Get a object from the pool, possibly creating one if needed."""
         # FIXME why while?
         while True:
-            if self._sem:
+            if self._sem:  # ensure that  we do not go over max_size
                 # the acquired token will be released at the end of ret()
                 if not self._sem.acquire(timeout=timeout if timeout else self._timeout):
                     raise TimeOut(f"timeout after {timeout}")
             with self._lock:
                 if len(self._avail) == 0:
-                    self._new()
+                    try:
+                        self._new()
+                    except Exception as e:  # pragma: no cover
+                        log.error(f"object creation failed: {e}")
+                        if self._sem:
+                            self._sem.release()
+                        raise
                 obj = self._avail.pop()
                 if self._getter:
                     try:
@@ -263,21 +305,24 @@ class Pool:
             if obj not in self._using:
                 # FIXME issue a warning?
                 return
+            self._using.remove(obj)
             if self._retter:
                 try:
                     self._retter(obj)
                 except Exception as e:
                     log.error(f"exception in retter: {e}")
-            self._using.remove(obj)
             if self._max_use and self._uses[obj].uses >= self._max_use:
                 self._del(obj)
                 if self._nobjs < self._min_size:
-                    self._new()
+                    # just recreate one object
+                    try:
+                        self._new()
+                    except Exception as e:  # pragma: no cover
+                        log.error(f"object creation failed: {e}")
             else:
                 self._uses[obj].last_ret = self._now()
                 self._avail.add(obj)
-            if self._sem:
-                # release token acquired in get()
+            if self._sem:  # release token acquired in get()
                 self._sem.release()
 
     @contextmanager
