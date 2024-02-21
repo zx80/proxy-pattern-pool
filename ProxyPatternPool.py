@@ -171,7 +171,11 @@ class Pool:
 
     def __str__(self):
         a, i = len(self._avail), len(self._using)
-        return f"objs={self._nobjs} created={self._ncreated} uses={self._nuses} avail={a} using={i} sem={self._sem}"
+        out = [f"Pool: objs={self._nobjs} created={self._ncreated} uses={self._nuses} avail={a} using={i} sem={self._sem}"]
+        if self._tracer:
+            out += [f"avail: {self._tracer(obj)}" for obj in self._avail]
+            out += [f"using: {self._tracer(obj)}" for obj in self._using]
+        return "\n".join(out)
 
     def _now(self) -> float:
         """Return now as a convenient float, in seconds."""
@@ -185,11 +189,6 @@ class Pool:
             with self._lock:
                 if log.getEffectiveLevel() == logging.DEBUG:
                     log.debug(str(self))
-                    if self._tracer:
-                        for obj in self._avail:
-                            log.debug(f"avail: {self._tracer(obj)}")
-                        for obj in self._using:
-                            log.debug(f"using: {self._tracer(obj)}")
                 now = self._now()
                 if self._max_using_delay_warn:
                     # kill long running objects
