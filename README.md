@@ -195,6 +195,11 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
+### 8.3 on 2024-02-24
+
+Add more stats.
+Improve housekeeping resilience.
+
 ### 8.2 on 2024-02-21
 
 Improved debugging information.

@@ -126,6 +126,7 @@ class Pool:
         self._fun = fun
         self._nobjs = 0  # current number of objects
         self._nuses = 0  # currenly in use
+        self._ncreating = 0  # total creation attempts
         self._ncreated = 0  # total created
         self._max_size = max_size
         self._min_size = min_size
@@ -152,9 +153,6 @@ class Pool:
         self._sem: threading.Semaphore|None = None
         if self._max_size:
             self._sem = threading.BoundedSemaphore(self._max_size)
-        # create the minimum number of objects
-        while self._nobjs < self._min_size:
-            self._new()
         # start housekeeper thread if needed
         self._housekeeper: threading.Thread|None = None
         if self._max_avail_delay or self._max_using_delay_warn:
@@ -168,10 +166,18 @@ class Pool:
         if self._delay:
             self._housekeeper = threading.Thread(target=self._houseKeeping, daemon=True)
             self._housekeeper.start()
+        # create the minimum number of objects
+        try:
+            while self._nobjs < self._min_size:
+                self._new()
+        except Exception as e:  # pragma: no cover
+            log.error(f"initial object creation failed: {e}")
+            # NOTE we keep on running, hoping that it will work later
 
     def __str__(self):
         a, i = len(self._avail), len(self._using)
-        out = [f"Pool: objs={self._nobjs} created={self._ncreated} uses={self._nuses} avail={a} using={i} sem={self._sem}"]
+        out = [f"Pool: objs={self._nobjs}/{self._ncreated}/{self._ncreating} "
+               f"uses={self._nuses} avail={a} using={i} sem={self._sem}"]
         if self._tracer:
             out += [f"avail: {self._tracer(obj)}" for obj in self._avail]
             out += [f"using: {self._tracer(obj)}" for obj in self._using]
@@ -181,43 +187,50 @@ class Pool:
         """Return now as a convenient float, in seconds."""
         return datetime.datetime.timestamp(datetime.datetime.now())
 
+    def _hkRound(self):
+        """Housekeeping round."""
+        now = self._now()
+        if self._max_using_delay_warn:
+            # warn/kill long running objects
+            long_run, long_kill, long_time = 0, 0, 0.0
+            for obj in list(self._using):
+                running = now - self._uses[obj].last_get
+                if running >= self._max_using_delay_warn:
+                    long_time += running
+                    long_run += 1
+                if self._max_using_delay_kill and running >= self._max_using_delay_kill:
+                    # we cannot just return the object because another thread may keep on using it.
+                    self._del(obj)
+                    if self._sem:  # pragma: no cover
+                        self._sem.release()
+                    long_kill += 1
+            if long_run or long_kill:
+                delay = (long_time / long_run) if long_run else 0.0
+                log.warning(f"long running objects: {long_run} ({delay} seconds, {long_kill} killed)")
+        if self._max_avail_delay and self._nobjs > self._min_size:
+            # close spurious objects unused for too long
+            for obj in list(self._avail):
+                if now - self._uses[obj].last_ret >= self._max_avail_delay:
+                    self._del(obj)
+                    # stop deleting objects if min size is reached
+                    if self._nobjs <= self._min_size:
+                        break
+        # (try) to create new objects if below min_size
+        while self._nobjs < self._min_size:
+            self._new()
+
     def _houseKeeping(self):
         """Housekeeping thread."""
         log.info(f"housekeeper running every {self._delay}")
         while True:
             time.sleep(self._delay)
             with self._lock:
-                if log.getEffectiveLevel() == logging.DEBUG:
-                    log.debug(str(self))
-                now = self._now()
-                if self._max_using_delay_warn:
-                    # kill long running objects
-                    long_run, long_kill, long_time = 0, 0, 0.0
-                    for obj in list(self._using):
-                        running = now - self._uses[obj].last_get
-                        if running >= self._max_using_delay_warn:
-                            long_time += running
-                            long_run += 1
-                        if self._max_using_delay_kill and running >= self._max_using_delay_kill:
-                            # we cannot just return the object because another thread may keep on using it.
-                            self._del(obj)
-                            if self._sem:  # pragma: no cover
-                                self._sem.release()
-                            long_kill += 1
-                    if long_run or long_kill:
-                        delay = (long_time / long_run) if long_run else 0.0
-                        log.warning(f"long running objects: {long_run} ({delay} seconds, {long_kill} killed)")
-                if self._max_avail_delay and self._nobjs > self._min_size:
-                    # close spurious objects unused for too long
-                    for obj in list(self._avail):
-                        if now - self._uses[obj].last_ret >= self._max_avail_delay:
-                            self._del(obj)
-                            # stop deleting objects if min size is reached
-                            if self._nobjs <= self._min_size:
-                                break
-                # create new objects if below min_size
-                while self._nobjs < self._min_size:
-                    self._new()
+                try:
+                    if log.getEffectiveLevel() == logging.DEBUG:
+                        log.debug(str(self))
+                    self._hkRound()
+                except Exception as e:  # pragma: no cover
+                    log.error(f"housekeeping round error: {e}")
 
     def __delete__(self):
         """This should be done automatically, but eventually."""
@@ -239,6 +252,7 @@ class Pool:
             if self._max_size and self._nobjs >= self._max_size:  # pragma: no cover
                 # this should not be raised thanks to the semaphore
                 raise PoolException(f"pool max size {self._max_size} reached")
+            self._ncreating += 1
             obj = self._fun(self._ncreated)
             self._ncreated += 1
             self._nobjs += 1
