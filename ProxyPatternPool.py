@@ -12,6 +12,7 @@ import threading
 import datetime
 import time
 import logging
+import json
 
 # get module version
 from importlib.metadata import version as pkg_version
@@ -60,9 +61,10 @@ class Pool:
     - getter: hook called on object pool extraction.
     - retter: hook called on object pool return.
     - closer: hook called on object destruction.
+    - stats: hook called to generate per-object stats.
     - log_level: set logging level for local logger.
     - tracer: generate debug information on an object.
-    - close: name of method for closer.
+    - close: name of method for closer (use closer instead).
 
     The object life cycle is the following, with the corresponding hooks:
 
@@ -114,6 +116,7 @@ class Pool:
         getter: PoolHook = None,
         retter: PoolHook = None,
         closer: PoolHook = None,
+        stats: Callable[[Any], dict[str, Any]]|None = None,
         close: str|None = None,  # temporary upward compatibility
         tracer: Callable[[Any], str]|None = None,
         log_level: int|None = None,
@@ -143,6 +146,7 @@ class Pool:
         self._getter = getter
         self._retter = retter
         self._closer = (lambda o: getattr(o, close)()) if close else closer
+        self._stats = stats
         # pool's content: available vs in use objects
         self._avail: set[Any] = set()
         self._using: set[Any] = set()
@@ -174,21 +178,37 @@ class Pool:
             log.error(f"initial object creation failed: {e}")
             # NOTE we keep on running, hoping that it will work later
 
+    def stats(self):
+        """Generate a JSON-compatible structure for stats."""
+        with self._lock:
+            info = {
+                "nobjs": self._nobjs,
+                "ncreated": self._ncreated,
+                "ncreating": self._ncreating,
+                "nuses": self._nuses,
+                "avail": len(self._avail),
+                "using": len(self._using),
+                "sem": str(self._sem)
+            }
+            i = 0
+            stats = self._stats if self._stats else self._tracer if self._tracer else str
+            for obj in self._avail:
+                info[str(i)] = stats(obj)
+                i += 1
+            for obj in self._using:
+                info[str(i)] = stats(obj)
+                i += 1
+            return info
+
     def __str__(self):
-        a, i = len(self._avail), len(self._using)
-        out = [f"Pool: objs={self._nobjs}/{self._ncreated}/{self._ncreating} "
-               f"uses={self._nuses} avail={a} using={i} sem={self._sem}"]
-        if self._tracer:
-            out += [f"avail: {self._tracer(obj)}" for obj in self._avail]
-            out += [f"using: {self._tracer(obj)}" for obj in self._using]
-        return "\n".join(out)
+        return json.dumps(self.stats())
 
     def _now(self) -> float:
         """Return now as a convenient float, in seconds."""
         return datetime.datetime.timestamp(datetime.datetime.now())
 
     def _hkRound(self):
-        """Housekeeping round."""
+        """Housekeeping round, under lock."""
         now = self._now()
         if self._max_using_delay_warn:
             # warn/kill long running objects
@@ -406,6 +426,7 @@ class Proxy:
         retter: PoolHook = None,
         closer: PoolHook = None,
         close: str|None = None,
+        stats: Callable[[Any], dict[str, Any]]|None = None,
         tracer: Callable[[Any], str]|None = None,
         # temporary backward compatibility
         max_delay: float = 0.0,
@@ -424,6 +445,11 @@ class Proxy:
         - max_using_delay_kill: when pooling, kill long uses.
         - timeout: when pooling, how long to wait for an object.
         - scope: level of sharing, default is to chose between SHARED and THREAD.
+        - opener: hook called on object creation.
+        - getter: hook called on object pool extraction.
+        - retter: hook called on object pool return.
+        - closer: hook called on object destruction.
+        - stats: hook called to generate per-object stats.
         - close: "close" method, if any.
         - log_level: set logging level for local logger.
         - tracer: generate debug information.
@@ -447,6 +473,7 @@ class Proxy:
         self._pool_getter = getter
         self._pool_retter = retter
         self._pool_closer = (lambda o: getattr(o, close)()) if close else closer
+        self._pool_stats = stats
         self._set(obj=obj, fun=fun, mandatory=False)
         if set_name and set_name != "_set":
             setattr(self, set_name, self._set)
@@ -483,6 +510,7 @@ class Proxy:
                           getter=self._pool_getter,
                           retter=self._pool_retter,
                           closer=self._pool_closer,
+                          stats=self._pool_stats,
                           tracer=self._pool_tracer) \
             if self._pool_max_size is not None else None  # fmt: skip
         self._nobjs = 0

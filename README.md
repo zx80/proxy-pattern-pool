@@ -114,6 +114,7 @@ Its constructor expects the following parameters:
 - `getter` function to call when getting an object, default *None* means no call.
 - `retter` function to call when returning an object, default *None* means no call.
 - `closer` function to call when discarding an object, default *None* means no call.
+- `stats` function to call to generate a JSON-compatible structure for stats.
 - `tracer` object debug helper, default *None* means less debug.
 
 Objects are created on demand by calling `fun` when needed.
@@ -194,6 +195,10 @@ This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/)
 are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
+
+### 8.4 on 2024-02-26
+
+Add `stats` parameter and `stats` method to `Pool`.
 
 ### 8.3 on 2024-02-24
 
