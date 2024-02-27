@@ -119,7 +119,7 @@ Its constructor expects the following parameters:
 
 Objects are created on demand by calling `fun` when needed.
 
-## Example
+## Proxy Example
 
 Here is an example of a flask application with blueprints and a shared
 resource.
@@ -181,7 +181,7 @@ See Also:
 - [Eventlet db_pool](https://eventlet.net/doc/modules/db_pool.html)
   for pooling MySQL or Postgres database connexions.
 - [Discussion](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
-  about database pool sizing.
+  about database pool sizing (spoiler: small is beautiful).
 
 ## License
 
