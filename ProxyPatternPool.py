@@ -125,6 +125,7 @@ class Pool:
         if log_level is not None:
             log.setLevel(log_level)
         self._tracer = tracer
+        self._started = self._now()
         # objects
         self._fun = fun
         self._nobjs = 0  # current number of objects
@@ -188,7 +189,8 @@ class Pool:
                 "nuses": self._nuses,
                 "avail": len(self._avail),
                 "using": len(self._using),
-                "sem": str(self._sem)
+                "sem": str(self._sem),
+                "running": self._now() - self._started,
             }
             i = 0
             stats = self._stats if self._stats else self._tracer if self._tracer else str

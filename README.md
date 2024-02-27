@@ -196,6 +196,10 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
+### 8.5 on 2024-02-27
+
+Add running time to stats.
+
 ### 8.4 on 2024-02-26
 
 Add `stats` parameter and `stats` method to `Pool`.
