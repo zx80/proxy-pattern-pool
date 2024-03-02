@@ -13,7 +13,7 @@ log = logging.getLogger("tests")
 
 def test_proxy_direct():
     v1, v2 = "hello!", "world!"
-    r1 = ppp.Proxy(close="close", log_level=logging.INFO)
+    r1 = ppp.Proxy(closer=lambda o: o.close(), log_level=logging.INFO)
     r1.set(v1)
     assert r1 == v1 and not r1 != v1
     assert r1.startswith("hell")
@@ -32,7 +32,7 @@ def test_proxy_threads():
     def gen_data(i):
         return f"data: {i}"
 
-    r = ppp.Proxy(fun=gen_data, max_size=None, close="close")
+    r = ppp.Proxy(fun=gen_data, max_size=None, closer=lambda o: o.close())
     assert r._nobjs == 0
     assert isinstance(r.__hash__(), int)
     assert r._nobjs == 1
@@ -67,7 +67,7 @@ def test_proxy_threads():
     except Exception as e:
         assert "Proxy must set either obj or fun" in str(e)
     # auto thread
-    r = ppp.Proxy(close="close")
+    r = ppp.Proxy(closer=lambda o: o.close())
     r._set_fun(lambda i: i)
     assert str(r) == "0"
     # versatile
@@ -167,7 +167,7 @@ def test_pool_class():
             return f"T({self._count})"
 
     # basic
-    pool = ppp.Pool(fun=T, max_size=None, max_use=1, close="close")
+    pool = ppp.Pool(fun=T, max_size=None, max_use=1, closer=lambda o: o.close())
     t = pool.get()
     assert str(t) == "T(0)"
     pool.ret(t)
@@ -263,3 +263,20 @@ def test_ogrc():
     t1, t2 = pool.get(), pool.get()
     pool.ret(t1)
     pool.ret(t2)
+
+
+health_count = 0
+
+def test_health():
+
+    def health(o):
+        global health_count
+        health_count += 1
+        return health_count % 2 == 1
+
+    pool = ppp.Pool(fun = lambda n: f"health {n}",
+                    health=health,
+                    min_size = 10,
+                    delay=0.4)
+    time.sleep(1.0)  # each hk round should remove half of the objects
+    assert pool._ncreated >= 20

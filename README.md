@@ -3,7 +3,7 @@
 Generic Proxy and Pool Classes for Python.
 
 ![Status](https://github.com/zx80/proxy-pattern-pool/actions/workflows/ppp.yml/badge.svg?branch=main&style=flat)
-![Tests](https://img.shields.io/badge/tests-10%20✓-success)
+![Tests](https://img.shields.io/badge/tests-11%20✓-success)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-success)
 ![Issues](https://img.shields.io/github/issues/zx80/proxy-pattern-pool?style=flat)
 ![Python](https://img.shields.io/badge/python-3-informational)
@@ -109,12 +109,14 @@ Its constructor expects the following parameters:
 - `max_avail_delay` when to discard an unused object.
 - `max_using_delay` when to warn about object kept for a long time.
 - `max_using_delay_kill` when to kill objects kept for a long time.
+- `hk_delay` force house keeping delay.
 - `log_level` set logging level, default *None* means no setting.
 - `opener` function to call when creating an object, default *None* means no call.
 - `getter` function to call when getting an object, default *None* means no call.
 - `retter` function to call when returning an object, default *None* means no call.
 - `closer` function to call when discarding an object, default *None* means no call.
 - `stats` function to call to generate a JSON-compatible structure for stats.
+- `health` function to call to check for an available object health.
 - `tracer` object debug helper, default *None* means less debug.
 
 Objects are created on demand by calling `fun` when needed.
@@ -195,6 +197,14 @@ This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/)
 are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
+
+### 9.0 on 2024-03-02
+
+Add `delay` parameter for forcing house keeping round delays.
+Add health check hook.
+Rework and improve statistics.
+Improve documentation.
+Drop `close` and `max_delay` upward compatibility parameters.
 
 ### 8.5 on 2024-02-27
 
