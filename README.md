@@ -198,6 +198,10 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
+### 9.1 on 2024-03-02
+
+Do not generate `"None"` but `None` on undefined semaphore stats.
+
 ### 9.0 on 2024-03-02
 
 Add `delay` parameter for forcing house keeping round delays.

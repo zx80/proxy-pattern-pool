@@ -222,7 +222,7 @@ class Pool:
                 "hk_errors": self._hk_errors,
                 "navail": len(self._avail),
                 "nusing": len(self._using),
-                "sem": str(self._sem),
+                "sem": str(self._sem) if self._sem else None,
                 "running": self._now() - self._started,
             }
             # per-object info
