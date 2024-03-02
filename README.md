@@ -166,10 +166,10 @@ Shared.init_app("hello world!")
 
 ## Notes
 
-This module is somehow rhetorical: because of the GIL Python is quite bad as a
-parallel language, so the point of creating threads which will mostly not really
-run in parallel is moot, thus the point of having a clever pool of stuff to be
-shared by these thread is even mooter!
+This module is rhetorical: because of the GIL Python is quite bad as a parallel
+language, so the point of creating threads which will mostly not really run in
+parallel is moot, thus the point of having a clever pool of stuff to be shared
+by these thread is even mooter!
 
 Shared object *must* be returned to the pool to avoid depleting resources.
 This may require some active cooperation from the infrastructure which may
@@ -198,7 +198,7 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
-### 9.2 on ?
+### 9.2 on 2023-03-02
 
 Rework internals to minimize lock time.
 Show timestamp in ISO format.
