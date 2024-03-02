@@ -310,6 +310,4 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 
 ## TODO
 
-- add a method to delete the proxy?
-- add an actual timeout feature?
-- how to manage a return automatically?
+- reduce the lock time on health check
