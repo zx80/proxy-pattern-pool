@@ -211,6 +211,7 @@ class Pool:
         with self._lock:
             # generic info
             info = {
+                "started": self._started.isoformat(),
                 "nobjs": self._nobjs,
                 "ncreated": self._ncreated,
                 "ncreating": self._ncreating,
