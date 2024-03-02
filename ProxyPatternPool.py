@@ -141,7 +141,8 @@ class Pool:
         if log_level is not None:
             log.setLevel(log_level)
         self._tracer = tracer
-        self._started = self._now()
+        self._started = datetime.datetime.now()
+        self._started_ts = datetime.datetime.timestamp(self._started)
         # objects
         self._fun = fun
         # statistics
@@ -152,8 +153,12 @@ class Pool:
         self._nhealth = 0  # health calls
         self._bad_health = 0  # bad health detected
         self._nkilled = 0  # long time using kills
+        self._nborrows = 0  # object borrowed
+        self._nreturns = 0  # object returned
+        self._ndestroys = 0  # object actuall destroyed
         self._nrecycled = 0  # long time avail deletes
         self._hk_errors = 0  # house keeping errors
+        self._hc_errors = 0  # heath check errors
         # pool management
         self._timeout = timeout
         self._max_size = max_size
@@ -174,9 +179,10 @@ class Pool:
         # pool's content: available vs in use objects
         self._avail: set[Any] = set()
         self._using: set[Any] = set()
+        self._todel: set[Any] = set()
         # keep track of usage count and last ops
         self._uses: dict[Any, Pool.UseInfo] = {}
-        # global pool re-entrant lock to manage attributes
+        # global pool re-entrant lock to manage all "self" attributes
         self._lock = threading.RLock()
         self._sem: threading.Semaphore|None = None
         if self._max_size:
@@ -199,11 +205,7 @@ class Pool:
             self._housekeeper.start()
         # try to create the minimum number of objects
         # NOTE on errors we keep on running, hoping that it will work later…
-        try:
-            while self._nobjs < self._min_size:
-                self._new()
-        except Exception as e:  # pragma: no cover
-            log.error(f"initial object creation failed: {e}")
+        self._fill()
 
     def stats(self):
         """Generate a JSON-compatible structure for stats."""
@@ -218,13 +220,18 @@ class Pool:
                 "nuses": self._nuses,
                 "nkilled": self._nkilled,
                 "nrecycled": self._nrecycled,
+                "nborrows": self._nborrows,
+                "nreturns": self._nreturns,
+                "ndestroys": self._ndestroys,
                 "nhealth": self._nhealth,
                 "bad_health": self._bad_health,
                 "hk_errors": self._hk_errors,
+                "hc_errors": self._hc_errors,
                 "navail": len(self._avail),
                 "nusing": len(self._using),
+                "ntodel": len(self._todel),
                 "sem": str(self._sem) if self._sem else None,
-                "running": self._now() - self._started,
+                "running": self._now() - self._started_ts,
             }
             # per-object info
             info["avail"] = []
@@ -243,47 +250,69 @@ class Pool:
         return datetime.datetime.timestamp(datetime.datetime.now())
 
     def _hkRound(self):
-        """Housekeeping round, under lock."""
+        """Housekeeping round, under lock.
+
+        Objects that are scheduled for destruction are moved to ``self._todel``
+        so as to minimize the time passed here.
+        """
         now = self._now()
+
         if self._max_using_delay_warn:
             # warn/kill long running objects
             long_run, long_kill, long_time = 0, 0, 0.0
             for obj in list(self._using):
                 running = now - self._uses[obj].last_get
                 if running >= self._max_using_delay_warn:
-                    long_time += running
                     long_run += 1
+                    long_time += running
                 if self._max_using_delay_kill and running >= self._max_using_delay_kill:
                     # we cannot just return the object because another thread may keep on using it.
+                    long_kill += 1
                     self._nkilled += 1
-                    self._del(obj)
+                    self._out(obj)
+                    self._todel.add(obj)
+                    # killed objects where under using and sem
                     if self._sem:  # pragma: no cover
                         self._sem.release()
-                    long_kill += 1
             if long_run or long_kill:
                 delay = (long_time / long_run) if long_run else 0.0
-                log.warning(f"long running objects: {long_run} ({delay} seconds, {long_kill} killed)")
+                log.warning(f"long running objects: {long_run} ({delay} seconds, {long_kill} to kill)")
+
         if self._max_avail_delay and self._nobjs > self._min_size:
-            # close spurious objects unused for too long
+            # close spurious unused for too long objects
             for obj in list(self._avail):
                 if now - self._uses[obj].last_ret >= self._max_avail_delay:
                     self._nrecycled += 1
-                    self._del(obj)
+                    self._out(obj)
+                    self._todel.add(obj)
                     # stop deleting objects if min size is reached
                     if self._nobjs <= self._min_size:
                         break
-        # call health check on available objects
-        if self._health:
-            for obj in list(self._avail):
-                self._nhealth += 1
-                # FIXME depending on heath implementation, this may be expensive
-                if not self._health(obj):
+
+    def _health_check(self):
+        """Health check, not under lock, only called from the hk thread."""
+        assert self._health
+        with self._lock:
+            objs = list(self._uses.keys())
+        tracer = self._tracer or str
+        # not under lock
+        for obj in objs:
+            if self._borrow(obj):
+                healthy = True
+                try:
+                    self._nhealth += 1
+                    healthy = self._health(obj)
+                except Exception as e:  # pragma: no cover
+                    self._hc_error += 1
+                    log.error(f"health check error: {e}")
+                finally:
+                    self._return(obj)
+                if not healthy:
+                    log.error(f"bad health: {tracer(obj)}")
                     self._bad_health += 1
-                    log.error("bad health: {tracer(obj)}")
-                    self._del(obj)
-        # (try) to create new objects if below min_size
-        while self._nobjs < self._min_size:
-            self._new()
+                    self._out(obj)
+                    self._todel.add(obj)
+            # else skipping obj in use
 
     def _houseKeeping(self):
         """Housekeeping thread."""
@@ -291,6 +320,7 @@ class Pool:
         while True:
             time.sleep(self._delay)
             with self._lock:
+                # normal round is done under lock, it must be fast!
                 try:
                     if log.getEffectiveLevel() == logging.DEBUG:
                         log.debug(str(self))
@@ -298,6 +328,38 @@ class Pool:
                 except Exception as e:  # pragma: no cover
                     self._hk_errors += 1
                     log.error(f"housekeeping round error: {e}")
+            # health check is done out of locking
+            if self._health:
+                self._health_check()
+            # actual deletions
+            self._empty()
+            # possibly re-create objects
+            self._fill()
+
+    def _fill(self):
+        """Create new available objects to reach min_size."""
+        with self._lock:
+            tocreate = self._min_size - self._nobjs
+        if tocreate > 0:
+            for _ in range(tocreate):
+                # acquire a token to avoid overshooting max_size
+                if self._sem and not self._sem.acquire(timeout=0.0):  # pragma: no cover
+                    continue
+                try:
+                    self._new()
+                except Exception as e:  # pragma: no cover
+                    log.error(f"new object failed: {e}")
+                if self._sem:
+                    self._sem.release()
+
+    def _empty(self):
+        """Empty current todel."""
+        with self._lock:
+            destroys = list(self._todel)
+            self._todel.clear()
+            self._ndestroys += len(destroys)
+        for obj in destroys:
+            self._destroy(obj)
 
     def __delete__(self):
         """This should be done automatically, but eventually."""
@@ -312,43 +374,93 @@ class Pool:
             self._avail.clear()
             self._uses.clear()
 
-    def _new(self):
-        """Create a new available object."""
+    def _create(self):
+        """Create a new object (low-level)."""
         log.debug(f"creating new obj with {self._fun}")
         with self._lock:
-            if self._max_size and self._nobjs >= self._max_size:  # pragma: no cover
-                # this should not be raised thanks to the semaphore
-                raise PoolException(f"pool max size {self._max_size} reached")
             self._ncreating += 1
-            obj = self._fun(self._ncreated)
+        # this may fail
+        obj = self._fun(self._ncreated)
+        now = self._now()
+        obj_info = Pool.UseInfo(0, now, now)
+        with self._lock:
             self._ncreated += 1
             self._nobjs += 1
-            self._avail.add(obj)
-            now = self._now()
-            self._uses[obj] = Pool.UseInfo(0, now, now)
-            if self._opener:
-                try:
-                    self._opener(obj)
-                except Exception as e:
-                    log.error(f"exception in opener: {e}")
-            return obj
+            self._uses[obj] = obj_info
+        return obj
 
-    def _del(self, obj):
-        """Destroy this object."""
+    def _new(self):
+        """Create a new available object."""
+        obj = self._create()
+        # on success
+        if self._opener:
+            try:
+                self._opener(obj)
+            except Exception as e:
+                log.error(f"exception in opener: {e}")
+        with self._lock:
+            self._avail.add(obj)
+        return obj
+
+    def _out(self, obj):
+        """Remove an object from pool."""
+        seen = False
         with self._lock:
             if obj in self._uses:
+                seen = True
                 del self._uses[obj]
             if obj in self._avail:
+                seen = True
                 self._avail.remove(obj)
             if obj in self._using:  # pragma: no cover
+                seen = True
                 self._using.remove(obj)
-            if self._closer:
-                try:
-                    self._closer(obj)
-                except Exception as e:
-                    log.error(f"exception in closer: {e}")
-            del obj
-            self._nobjs -= 1
+            if seen:
+                self._nobjs -= 1
+            # else possible double removal?
+
+    def _destroy(self, obj):
+        """Destroy an object."""
+        if self._closer:
+            try:
+                self._closer(obj)
+            except Exception as e:
+                log.error(f"exception in closer: {e}")
+        del obj
+
+    def _del(self, obj):
+        """Delete an object."""
+        self._out(obj)
+        self._destroy(obj)
+
+    def _borrow(self, obj):
+        """Borrow an existing object.
+
+        This is a special get with does not get through getter or setter,
+        for internal use such as house keeping, health check…
+
+        If the object is not available, _None_ is returned, this is just best effort.
+        """
+        if self._sem and not self._sem.acquire(timeout=0.0):  # pragma: no cover
+            return None
+        with self._lock:
+            if obj in self._avail:
+                self._avail.remove(obj)
+                self._using.add(obj)
+                self._nborrows += 1
+                return obj
+            else:  # pragma: no cover
+                return None
+
+    def _return(self, obj):
+        """Return borrowed object."""
+        with self._lock:
+            assert obj in self._using
+            self._using.remove(obj)
+            self._avail.add(obj)
+            self._nreturns += 1
+        if self._sem:  # pragma: no cover
+            self._sem.release()
 
     def get(self, timeout=None):
         """Get a object from the pool, possibly creating one if needed."""
@@ -359,7 +471,7 @@ class Pool:
                 if not self._sem.acquire(timeout=timeout if timeout else self._timeout):
                     raise TimeOut(f"timeout after {timeout}")
             with self._lock:
-                if len(self._avail) == 0:
+                if not self._avail:
                     try:
                         self._new()
                     except Exception as e:  # pragma: no cover
@@ -368,42 +480,39 @@ class Pool:
                             self._sem.release()
                         raise
                 obj = self._avail.pop()
-                if self._getter:
-                    try:
-                        self._getter(obj)
-                    except Exception as e:
-                        log.error(f"exception in getter: {e}")
                 self._using.add(obj)
                 self._nuses += 1
                 self._uses[obj].uses += 1
                 self._uses[obj].last_get = self._now()
-                return obj
+            if self._getter:
+                try:
+                    self._getter(obj)
+                except Exception as e:
+                    log.error(f"exception in getter: {e}")
+            return obj
 
     def ret(self, obj):
         """Return object to pool."""
+        if self._retter:
+            try:
+                self._retter(obj)
+            except Exception as e:
+                log.error(f"exception in retter: {e}")
         with self._lock:
             if obj not in self._using:
-                # FIXME issue a warning?
+                # FIXME issue a warning on multiple ret calls?
                 return
-            self._using.remove(obj)
-            if self._retter:
-                try:
-                    self._retter(obj)
-                except Exception as e:
-                    log.error(f"exception in retter: {e}")
             if self._max_use and self._uses[obj].uses >= self._max_use:
-                self._del(obj)
-                if self._nobjs < self._min_size:
-                    # just recreate one object
-                    try:
-                        self._new()
-                    except Exception as e:  # pragma: no cover
-                        log.error(f"object creation failed: {e}")
+                self._out(obj)
+                self._todel.add(obj)
             else:
-                self._uses[obj].last_ret = self._now()
+                self._using.remove(obj)
                 self._avail.add(obj)
-            if self._sem:  # release token acquired in get()
-                self._sem.release()
+                self._uses[obj].last_ret = self._now()
+        if self._sem:  # release token acquired in get()
+            self._sem.release()
+        self._empty()
+        self._fill()
 
     @contextmanager
     def obj(self, timeout=None):

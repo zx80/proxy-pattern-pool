@@ -198,8 +198,9 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
-### ? on ?
+### 9.2 on ?
 
+Rework internals to minimize lock time.
 Show timestamp in ISO format.
 
 ### 9.1 on 2024-03-02
