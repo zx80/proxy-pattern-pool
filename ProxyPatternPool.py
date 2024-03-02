@@ -276,6 +276,7 @@ class Pool:
         if self._health:
             for obj in list(self._avail):
                 self._nhealth += 1
+                # FIXME depending on heath implementation, this may be expensive
                 if not self._health(obj):
                     self._bad_health += 1
                     log.error("bad health: {tracer(obj)}")
