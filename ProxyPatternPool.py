@@ -216,25 +216,25 @@ class Pool:
         # NOTE on errors we keep on running, hoping that it will work later…
         self._fill()
 
+    def __stats_data(self, obj, now):
+        """Generate stats data for obj, under lock."""
+        data = {}
+        if self._stats:
+            data["stats"] = self._stats(obj)
+        elif self._tracer:
+            data["trace"] = self._tracer(obj)
+        else:
+            data["str"] = str(obj)
+        if obj in self._uses:
+            suo = self._uses[obj]
+            data.update(uses=suo.uses, last_get=suo.last_get - now, last_ret=suo.last_ret - now)
+        return data
+
     def stats(self):
         """Generate a JSON-compatible structure for stats."""
 
-        # generate per-objet status depending on available hooks
-        stats = self._stats if self._stats else self._tracer if self._tracer else str
-
         with self._lock:
             now = self._now()
-
-            # per-object stats
-            avail = []
-            for obj in self._avail:
-                avail.append(stats(obj))
-
-            using = []
-            for obj in self._using:
-                using.append(stats(obj))
-
-            # TODO also add UseInfo data?
 
             # generic info
             return {
@@ -247,6 +247,7 @@ class Pool:
                 "timeout": self._timeout,
                 "health_freq": self._health_freq,
                 # pool status
+                "now": now,
                 "sem": {"value": self._sem._value, "init": self._sem._initial_value} if self._sem else None,
                 "navail": len(self._avail),
                 "nusing": len(self._using),
@@ -254,8 +255,9 @@ class Pool:
                 "running": now - self._started_ts,
                 "rel_hk_last": self._hk_last - now,
                 "time_per_hk": self._hk_time / max(self._hk_rounds, 1),
-                "avail": avail,
-                "using": using,
+                # detailed per-object stats
+                "avail": [self.__stats_data(obj, now) for obj in self._avail],
+                "using": [self.__stats_data(obj, now) for obj in self._using],
                 # counts
                 "nobjs": self._nobjs,
                 "ncreated": self._ncreated,

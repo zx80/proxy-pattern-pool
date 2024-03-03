@@ -259,8 +259,11 @@ def test_ogrc():
                     opener=lambda o: trace("open", o),
                     getter=lambda o: trace("get", o),
                     retter=lambda o: trace("ret", o),
-                    closer=lambda o: trace("close", o))
+                    closer=lambda o: trace("close", o),
+                    stats=str,
+                    tracer=str)
     t1, t2 = pool.get(), pool.get()
+    assert isinstance(pool.stats(), dict)
     pool.ret(t1)
     pool.ret(t2)
 
