@@ -1,5 +1,9 @@
 # Proxy Pattern Pool Versions
 
+## TODO
+
+- more stats?
+
 ## 9.5 on 2023-03-03
 
 Collect and show more statistics.
@@ -123,7 +127,3 @@ Add some documentation.
 ## 0.1 on 2022-10-28
 
 Initial release with code extracted from `FlaskSimpleAuth`.
-
-# TODO
-
-- more stats?
