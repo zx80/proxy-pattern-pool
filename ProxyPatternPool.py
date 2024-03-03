@@ -149,23 +149,24 @@ class Pool:
         # objects
         self._fun = fun
         # statistics
-        self._nobjs = 0  # current number of objects
-        self._nuses = 0  # currenly in use
-        self._ncreating = 0  # total creation attempts
-        self._ncreated = 0  # total created
-        self._nhealth = 0  # health calls
-        self._bad_health = 0  # bad health detected
-        self._nkilled = 0  # long time using kills
-        self._nborrows = 0  # object borrowed
-        self._nreturns = 0  # object returned
-        self._ndestroys = 0  # object actuall destroyed
-        self._nrecycled = 0  # long time avail deletes
-        self._hk_errors = 0  # house keeping errors
-        self._hc_errors = 0  # heath check errors
-        self._hk_rounds = 0  # number of house keeper rounds
-        self._hc_rounds = 0  # number of house keeper rounds
-        self._hk_time = 0.0  # cumulated time spent in house keeping
-        self._hk_last = 0.0  # last time a house keeping round started
+        self._nobjs = 0       # current number of objects
+        self._nuses = 0       # cumulated number of uses (successful get)
+        self._ncreating = 0   # number of creation attempts
+        self._ncreated = 0    # number of created objects
+        self._nhealth = 0     # number of health calls
+        self._bad_health = 0  # number of bad health detected
+        self._nborrows = 0    # number of objects borrowed
+        self._nreturns = 0    # number of objects returned
+        self._nkilled = 0     # number of long time using kills
+        self._nrecycled = 0   # number of long time avail deletes
+        self._nwornout = 0    # number of max_use-d objects
+        self._ndestroys = 0   # number of objects actually destroyed
+        self._hk_rounds = 0   # number of house keeper rounds
+        self._hc_rounds = 0   # number of health check rounds
+        self._hk_errors = 0   # number of house keeping errors
+        self._hc_errors = 0   # number of heath check errors
+        self._hk_time = 0.0   # cumulated time spent in house keeping
+        self._hk_last = 0.0   # last time a house keeping round started
         # pool management
         self._timeout = timeout
         self._max_size = max_size
@@ -196,7 +197,6 @@ class Pool:
         if self._max_size:
             self._sem = threading.BoundedSemaphore(self._max_size)
         # start housekeeper thread if needed
-        self._housekeeper: threading.Thread|None = None
         if delay:
             self._delay = delay
         elif self._max_avail_delay or self._max_using_delay_warn:
@@ -208,6 +208,7 @@ class Pool:
         else:
             self._delay = 60.0 if self._health else 0.0
         assert not (self._health and self._delay == 0.0)
+        self._housekeeper: threading.Thread|None = None
         if self._delay:
             self._housekeeper = threading.Thread(target=self._houseKeeping, daemon=True)
             self._housekeeper.start()
@@ -224,14 +225,27 @@ class Pool:
         with self._lock:
             now = self._now()
 
+            # per-object stats
+            avail = []
+            for obj in self._avail:
+                avail.append(stats(obj))
+
+            using = []
+            for obj in self._using:
+                using.append(stats(obj))
+
+            # TODO also add UseInfo data?
+
             # generic info
-            info = {
+            return {
                 # pool configuration
                 "started": self._started.isoformat(),
                 "min_size": self._min_size,
                 "max_size": self._max_size,
+                "max_use": self._max_use,
                 "delay": self._delay,
                 "timeout": self._timeout,
+                "health_freq": self._health_freq,
                 # pool status
                 "sem": {"value": self._sem._value, "init": self._sem._initial_value} if self._sem else None,
                 "navail": len(self._avail),
@@ -240,6 +254,8 @@ class Pool:
                 "running": now - self._started_ts,
                 "rel_hk_last": self._hk_last - now,
                 "time_per_hk": self._hk_time / max(self._hk_rounds, 1),
+                "avail": avail,
+                "using": using,
                 # counts
                 "nobjs": self._nobjs,
                 "ncreated": self._ncreated,
@@ -247,6 +263,7 @@ class Pool:
                 "nuses": self._nuses,
                 "nkilled": self._nkilled,
                 "nrecycled": self._nrecycled,
+                "nwornout": self._nwornout,
                 "nborrows": self._nborrows,
                 "nreturns": self._nreturns,
                 "ndestroys": self._ndestroys,
@@ -257,17 +274,6 @@ class Pool:
                 "hk_rounds": self._hk_rounds,
                 "hc_rounds": self._hc_rounds,
             }
-
-            # per-object info
-            info["avail"] = []
-            for obj in self._avail:
-                info["avail"].append(stats(obj))
-
-            info["using"] = []
-            for obj in self._using:
-                info["using"].append(stats(obj))
-
-            return info
 
     def __str__(self):
         return json.dumps(self.stats())
@@ -538,6 +544,7 @@ class Pool:
                 # FIXME issue a warning on multiple ret calls?
                 return
             if self._max_use and self._uses[obj].uses >= self._max_use:
+                self._nwornout += 1
                 self._out(obj)
                 self._todel.add(obj)
             else:

@@ -179,6 +179,10 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
+### ? on ?
+
+Collect and show more statistics.
+
 ### 9.4 on 2023-03-03
 
 Improve stats output for semaphore.
@@ -301,4 +305,4 @@ Initial release with code extracted from `FlaskSimpleAuth`.
 
 ## TODO
 
-- reduce the lock time on health check
+- more stats?
