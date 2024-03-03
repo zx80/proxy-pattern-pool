@@ -179,7 +179,7 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
-### ? on ?
+### 9.5 on 2023-03-03
 
 Collect and show more statistics.
 
