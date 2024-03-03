@@ -68,29 +68,9 @@ The `Proxy` constructors expects the following parameters:
   the proxied methods.
   It is used as a prefix to have `set_obj` and `set_fun` functions
   which allow to reset the internal `obj` or `fun`.
-- `max_size` maximum pool size for objects kept.
-  *None* means no pooling, *0* means unlimited pool size (the default).
-- `min_size` minimum pool size.
-  This many is created on startup.
-  Default is *1*.
-- `max_use` how many times an object should be reused.
-  default is *0* which means unlimited.
-- `max_avail_delay` after which unused objects are discarded.
-  default is *0.0* which means unlimited.
-- `max_using_delay` warn about objects being used for too long.
-  default is *0.0* which means no warning.
-- `max_using_delay_kill` kill objects being used for too long.
-  default is *0.0* which means no killing.
-- `opener` function to call when creating an object.
-  default is *None* means nothing is called.
-- `getter` function to call when getting an object.
-  default is *None* means nothing is called.
-- `retter` function to call when returning an object.
-  default is *None* means nothing is called.
-- `closer` function to call when discarding an object.
-  default is *None* means nothing is called.
 - `log_level` set logging level, default *None* means no setting.
-- `tracer` object debug helper, default *None* means less debug.
+- `max_size` of pool, default _None_ means **no** pooling.
+- `max_size` and _all_ other parameters are forwarded to `Pool`.
 
 When `max_size` is not *None*, a `Pool` is created to store the created
 objects so as to reuse them. It is the responsability of the user to
@@ -109,6 +89,7 @@ Its constructor expects the following parameters:
 - `max_avail_delay` when to discard an unused object.
 - `max_using_delay` when to warn about object kept for a long time.
 - `max_using_delay_kill` when to kill objects kept for a long time.
+- `health_freq` run health check this every house keeper rounds.
 - `hk_delay` force house keeping delay.
 - `log_level` set logging level, default *None* means no setting.
 - `opener` function to call when creating an object, default *None* means no call.
@@ -183,7 +164,7 @@ See Also:
 - [Eventlet db_pool](https://eventlet.net/doc/modules/db_pool.html)
   for pooling MySQL or Postgres database connexions.
 - [Discussion](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
-  about database pool sizing (spoiler: small is beautiful).
+about database pool sizing (spoiler: small is beautiful).
 
 ## License
 
@@ -197,6 +178,11 @@ This code is [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/)
 are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
+
+### 9.3 on 2023-03-03
+
+Improve collected stats.
+Clean-up code, reducing loc significantly.
 
 ### 9.2 on 2023-03-02
 

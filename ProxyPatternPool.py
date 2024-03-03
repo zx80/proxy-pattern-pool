@@ -67,6 +67,7 @@ class Pool:
     - max_using_delay_kill: kill if object is kept for more than this time, 0.0 for no killing.
     - delay: use this delay secs for house keeping rounds, 0 for computed default.
       the default delay computed based on previous delay.
+    - health_freq: check health this every round, default is 1.
 
     Hook parameters:
     - opener: hook called on object creation.
@@ -119,15 +120,17 @@ class Pool:
     def __init__(
         self,
         fun: FunHook,
-        # named parameters
         max_size: int = 0,
         min_size: int = 1,
         timeout: float|None = None,
+        # recycling
         max_use: int = 0,
         max_avail_delay: float = 0.0,
         max_using_delay: float = 0.0,
         max_using_delay_kill: float = 0.0,
+        health_freq: int = 1,
         delay: float = 0.0,
+        # hooks
         opener: PoolHook|None = None,
         getter: PoolHook|None = None,
         retter: PoolHook|None = None,
@@ -159,6 +162,10 @@ class Pool:
         self._nrecycled = 0  # long time avail deletes
         self._hk_errors = 0  # house keeping errors
         self._hc_errors = 0  # heath check errors
+        self._hk_rounds = 0  # number of house keeper rounds
+        self._hc_rounds = 0  # number of house keeper rounds
+        self._hk_time = 0.0  # cumulated time spent in house keeping
+        self._hk_last = 0.0  # last time a house keeping round started
         # pool management
         self._timeout = timeout
         self._max_size = max_size
@@ -167,6 +174,7 @@ class Pool:
         self._max_avail_delay = max_avail_delay
         self._max_using_delay_kill = max_using_delay_kill
         self._max_using_delay_warn = max_using_delay or max_using_delay_kill
+        self._health_freq = health_freq
         if self._max_using_delay_kill and self._max_using_delay_warn > self._max_using_delay_kill:
             log.warning("inconsistent max_using_delay_warn > max_using_delay_kill")
         # hooks
@@ -209,11 +217,30 @@ class Pool:
 
     def stats(self):
         """Generate a JSON-compatible structure for stats."""
+
+        # generate per-objet status depending on available hooks
         stats = self._stats if self._stats else self._tracer if self._tracer else str
+
         with self._lock:
+            now = self._now()
+
             # generic info
             info = {
+                # pool configuration
                 "started": self._started.isoformat(),
+                "min_size": self._min_size,
+                "max_size": self._max_size,
+                "delay": self._delay,
+                "timeout": self._timeout,
+                # pool status
+                "sem": str(self._sem) if self._sem else None,
+                "navail": len(self._avail),
+                "nusing": len(self._using),
+                "ntodel": len(self._todel),
+                "running": now - self._started_ts,
+                "rel_hk_last": self._hk_last - now,
+                "time_per_hk": self._hk_time / max(self._hk_rounds, 1),
+                # counts
                 "nobjs": self._nobjs,
                 "ncreated": self._ncreated,
                 "ncreating": self._ncreating,
@@ -227,19 +254,19 @@ class Pool:
                 "bad_health": self._bad_health,
                 "hk_errors": self._hk_errors,
                 "hc_errors": self._hc_errors,
-                "navail": len(self._avail),
-                "nusing": len(self._using),
-                "ntodel": len(self._todel),
-                "sem": str(self._sem) if self._sem else None,
-                "running": self._now() - self._started_ts,
+                "hk_rounds": self._hk_rounds,
+                "hc_rounds": self._hc_rounds,
             }
+
             # per-object info
             info["avail"] = []
             for obj in self._avail:
                 info["avail"].append(stats(obj))
+
             info["using"] = []
             for obj in self._using:
                 info["using"].append(stats(obj))
+
             return info
 
     def __str__(self):
@@ -255,6 +282,7 @@ class Pool:
         Objects that are scheduled for destruction are moved to ``self._todel``
         so as to minimize the time passed here.
         """
+        self._hk_rounds += 1
         now = self._now()
 
         if self._max_using_delay_warn:
@@ -291,10 +319,12 @@ class Pool:
 
     def _health_check(self):
         """Health check, not under lock, only called from the hk thread."""
-        assert self._health
+
+        self._hc_rounds += 1
         with self._lock:
             objs = list(self._uses.keys())
         tracer = self._tracer or str
+
         # not under lock
         for obj in objs:
             if self._borrow(obj):
@@ -316,9 +346,12 @@ class Pool:
 
     def _houseKeeping(self):
         """Housekeeping thread."""
+
         log.info(f"housekeeper running every {self._delay}")
+
         while True:
             time.sleep(self._delay)
+            self._hk_last = self._now()
             with self._lock:
                 # normal round is done under lock, it must be fast!
                 try:
@@ -329,12 +362,14 @@ class Pool:
                     self._hk_errors += 1
                     log.error(f"housekeeping round error: {e}")
             # health check is done out of locking
-            if self._health:
+            if self._health and self._hk_rounds % self._health_freq == 0:
                 self._health_check()
             # actual deletions
             self._empty()
             # possibly re-create objects
             self._fill()
+            # update run time
+            self._hk_time += self._now() - self._hk_last
 
     def _fill(self):
         """Create new available objects to reach min_size."""
@@ -567,48 +602,20 @@ class Proxy:
         self,
         # proxy definition
         obj: Any = None,
-        set_name: str = "set",
         fun: FunHook|None = None,
+        set_name: str = "set",
         scope: Scope = Scope.AUTO,
+        log_level: int|None = None,
         # optional pool parameters
         max_size: int = 0,
-        min_size: int = 1,
-        max_use: int = 0,
-        max_avail_delay: float = 0.0,
-        max_using_delay: float = 0.0,
-        max_using_delay_kill: float = 0.0,
-        delay: float = 0.0,
-        timeout: float|None = None,
-        log_level: int|None = None,
-        opener: PoolHook = None,
-        getter: PoolHook = None,
-        retter: PoolHook = None,
-        closer: PoolHook = None,
-        stats: StatsHook|None = None,
-        tracer: TraceHook|None = None,
-        health: HealthHook|None = None,
+        **kwargs,
     ):
         """Constructor parameters:
 
-        - set_name: provide another prefix for the "set" functions.
         - obj: object to be wrapped, can also be provided later.
+        - set_name: provide another prefix for the "set" functions.
         - fun: function to generated a per-thread/or-whatever wrapped object.
         - max_size: pool maximum size, 0 for unlimited, None for no pooling.
-        - min_size: pool minimum size.
-        - max_use: when pooling, how many times to reuse an object.
-        - max_avail_delay: when pooling, when to discard an unused object.
-        - max_using_delay: when pooling, warn about long uses.
-        - max_using_delay_kill: when pooling, kill long uses.
-        - delay: force this house keeping delay
-        - timeout: when pooling, how long to wait for an object.
-        - scope: level of sharing, default is to chose between SHARED and THREAD.
-        - opener: hook called on object creation.
-        - getter: hook called on object pool extraction.
-        - retter: hook called on object pool return.
-        - closer: hook called on object destruction.
-        - health: hook called to check for available object health.
-        - stats: hook called to generate per-object stats.
-        - tracer: hook called to generate debug information.
         - log_level: set logging level for local logger.
         """
         # scope encodes the expected object unicity or multiplicity
@@ -619,20 +626,7 @@ class Proxy:
             Proxy.Scope.THREAD if scope == Proxy.Scope.AUTO and fun else
             scope)  # fmt: skip
         self._pool_max_size = max_size
-        self._pool_min_size = min_size
-        self._pool_max_use = max_use
-        self._pool_max_avail_delay = max_avail_delay
-        self._pool_max_using_delay = max_using_delay
-        self._pool_max_using_delay_kill = max_using_delay_kill
-        self._pool_delay = delay
-        self._pool_timeout = timeout
-        self._pool_tracer = tracer
-        self._pool_opener = opener
-        self._pool_getter = getter
-        self._pool_retter = retter
-        self._pool_closer = closer
-        self._pool_health = health
-        self._pool_stats = stats
+        self._pool_kwargs = kwargs
         self._set(obj=obj, fun=fun, mandatory=False)
         if set_name and set_name != "_set":
             setattr(self, set_name, self._set)
@@ -657,25 +651,10 @@ class Proxy:
         assert self._scope in (Proxy.Scope.THREAD, Proxy.Scope.VERSATILE,
             Proxy.Scope.WERKZEUG, Proxy.Scope.EVENTLET, Proxy.Scope.GEVENT)
         self._fun = fun
-        # when using a function, we use a pool
-        # NOTE on max_use == 1 and max_size == 0 we could avoid that?
-        self._pool = Pool(fun,
-                          max_size=self._pool_max_size,
-                          min_size=self._pool_min_size,
-                          timeout=self._pool_timeout,
-                          max_use=self._pool_max_use,
-                          max_avail_delay=self._pool_max_avail_delay,
-                          max_using_delay=self._pool_max_using_delay,
-                          max_using_delay_kill=self._pool_max_using_delay_kill,
-                          delay=self._pool_delay,
-                          opener=self._pool_opener,
-                          getter=self._pool_getter,
-                          retter=self._pool_retter,
-                          closer=self._pool_closer,
-                          health=self._pool_health,
-                          stats=self._pool_stats,
-                          tracer=self._pool_tracer) \
-            if self._pool_max_size is not None else None  # fmt: skip
+        if self._pool_max_size is not None:
+            self._pool = Pool(fun, max_size=self._pool_max_size, **self._pool_kwargs)
+        else:
+            self._pool = None
         self._nobjs = 0
 
         # local implementation (*event coverage skip for 3.12)
