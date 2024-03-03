@@ -4,20 +4,20 @@
 
 - more stats?
 
-## 9.5 on 2023-03-03
+## 9.5 on 2024-03-03
 
 Collect and show more statistics.
 
-## 9.4 on 2023-03-03
+## 9.4 on 2024-03-03
 
 Improve stats output for semaphore.
 
-## 9.3 on 2023-03-03
+## 9.3 on 2024-03-03
 
 Improve collected stats.
 Clean-up code, reducing loc significantly.
 
-## 9.2 on 2023-03-02
+## 9.2 on 2024-03-02
 
 Rework internals to minimize lock time.
 Show timestamp in ISO format.
