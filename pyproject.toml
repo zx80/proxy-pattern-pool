@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ProxyPatternPool"
-version = "9.3"
+version = "9.4"
 authors = [ { name = "Fabien Coelho", email = "proxy.pool@coelho.net" } ]
 description = "Generic Proxy and Pool Classes for Python"
 readme = "README.md"

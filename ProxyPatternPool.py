@@ -190,7 +190,7 @@ class Pool:
         self._todel: set[Any] = set()
         # keep track of usage count and last ops
         self._uses: dict[Any, Pool.UseInfo] = {}
-        # global pool re-entrant lock to manage all "self" attributes
+        # global pool re-entrant lock to manage "self" attributes
         self._lock = threading.RLock()
         self._sem: threading.Semaphore|None = None
         if self._max_size:
@@ -233,7 +233,7 @@ class Pool:
                 "delay": self._delay,
                 "timeout": self._timeout,
                 # pool status
-                "sem": str(self._sem) if self._sem else None,
+                "sem": {"value": self._sem._value, "init": self._sem._initial_value} if self._sem else None,
                 "navail": len(self._avail),
                 "nusing": len(self._using),
                 "ntodel": len(self._todel),

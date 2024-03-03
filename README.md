@@ -179,6 +179,10 @@ are hosted on [GitHub](https://github.com).
 Install [package](https://pypi.org/project/ProxyPatternPool/) from
 [PyPI](https://pypi.org/).
 
+### 9.4 on 2023-03-03
+
+Improve stats output for semaphore.
+
 ### 9.3 on 2023-03-03
 
 Improve collected stats.
