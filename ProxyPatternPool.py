@@ -141,6 +141,7 @@ class Pool:
         log_level: int|None = None,
     ):
         # debugging
+        self._debug = (log_level is not None and log_level == logging.DEBUG)
         if log_level is not None:
             log.setLevel(log_level)
         self._tracer = tracer
@@ -248,7 +249,7 @@ class Pool:
                 "health_freq": self._health_freq,
                 # pool status
                 "now": now,
-                "sem": {"value": self._sem._value, "init": self._sem._initial_value} if self._sem else None,
+                "sem": {"value": self._sem._value, "init": self._sem._initial_value} if self._sem else None,  # type: ignore
                 "navail": len(self._avail),
                 "nusing": len(self._using),
                 "ntodel": len(self._todel),
@@ -360,6 +361,7 @@ class Pool:
         while True:
             time.sleep(self._delay)
             self._hk_last = self._now()
+            self._debug and log.debug("house keeper: round start")
             with self._lock:
                 # normal round is done under lock, it must be fast!
                 try:
@@ -378,25 +380,30 @@ class Pool:
             self._fill()
             # update run time
             self._hk_time += self._now() - self._hk_last
+            self._debug and log.debug("house keeper: round done")
 
     def _fill(self):
         """Create new available objects to reach min_size."""
         with self._lock:
             tocreate = self._min_size - self._nobjs
         if tocreate > 0:
+            self._debug and log.debug(f"filling {tocreate} objects")
             for _ in range(tocreate):
                 # acquire a token to avoid overshooting max_size
                 if self._sem and not self._sem.acquire(timeout=0.0):  # pragma: no cover
-                    continue
+                    self._debug and log.debug("filling skipped on acquire")
+                    break
                 try:
                     self._new()
                 except Exception as e:  # pragma: no cover
                     log.error(f"new object failed: {e}")
                 if self._sem:
                     self._sem.release()
+            self._debug and log.debug(f"filling {tocreate} objects done")
 
     def _empty(self):
         """Empty current todel."""
+        self._debug and log.debug(f"deleting {len(self._todel)} objects")
         with self._lock:
             destroys = list(self._todel)
             self._todel.clear()
@@ -419,7 +426,7 @@ class Pool:
 
     def _create(self):
         """Create a new object (low-level)."""
-        log.debug(f"creating new obj with {self._fun}")
+        self._debug and log.debug(f"creating new obj with {self._fun}")
         with self._lock:
             self._ncreating += 1
         # this may fail
@@ -513,6 +520,7 @@ class Pool:
                 # the acquired token will be released at the end of ret()
                 if not self._sem.acquire(timeout=timeout if timeout else self._timeout):
                     raise TimeOut(f"timeout after {timeout}")
+                self._debug and log.debug("get: 1")
             with self._lock:
                 if not self._avail:
                     try:
@@ -520,6 +528,7 @@ class Pool:
                     except Exception as e:  # pragma: no cover
                         log.error(f"object creation failed: {e}")
                         if self._sem:
+                            self._debug and log.debug("get: -1")
                             self._sem.release()
                         raise
                 obj = self._avail.pop()
@@ -554,6 +563,7 @@ class Pool:
                 self._avail.add(obj)
                 self._uses[obj].last_ret = self._now()
         if self._sem:  # release token acquired in get()
+            self._debug and log.debug("ret: -1")
             self._sem.release()
         self._empty()
         self._fill()
