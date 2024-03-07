@@ -3,11 +3,12 @@
 ## TODO
 
 - more stats?
-- pyright check + CI
 
-## 9.6 on ?
+## 9.6 on 2024-03-07
 
 Add more guarded debugging traces.
+Pass `pyright` and enable it in CI.
+Add and use `ruff` instead of `flake8`.
 
 ## 9.5 on 2024-03-03
 

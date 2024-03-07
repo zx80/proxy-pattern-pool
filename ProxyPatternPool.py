@@ -329,6 +329,8 @@ class Pool:
     def _health_check(self):
         """Health check, not under lock, only called from the hk thread."""
 
+        assert self._health
+
         self._hc_rounds += 1
         with self._lock:
             objs = list(self._uses.keys())
@@ -342,7 +344,7 @@ class Pool:
                     self._nhealth += 1
                     healthy = self._health(obj)
                 except Exception as e:  # pragma: no cover
-                    self._hc_error += 1
+                    self._hc_errors += 1
                     log.error(f"health check error: {e}")
                 finally:
                     self._return(obj)
@@ -361,11 +363,11 @@ class Pool:
         while True:
             time.sleep(self._delay)
             self._hk_last = self._now()
-            self._debug and log.debug("house keeper: round start")
+            self._debug and log.debug("house keeper: round start")  # type: ignore
             with self._lock:
                 # normal round is done under lock, it must be fast!
                 try:
-                    self._debug and log.debug(str(self))
+                    self._debug and log.debug(str(self))  # type: ignore
                     self._hkRound()
                 except Exception as e:  # pragma: no cover
                     self._hk_errors += 1
@@ -379,18 +381,18 @@ class Pool:
             self._fill()
             # update run time
             self._hk_time += self._now() - self._hk_last
-            self._debug and log.debug("house keeper: round done")
+            self._debug and log.debug("house keeper: round done")  # type: ignore
 
     def _fill(self):
         """Create new available objects to reach min_size."""
         with self._lock:
             tocreate = self._min_size - self._nobjs
         if tocreate > 0:
-            self._debug and log.debug(f"filling {tocreate} objects")
+            self._debug and log.debug(f"filling {tocreate} objects")  # type: ignore
             for _ in range(tocreate):
                 # acquire a token to avoid overshooting max_size
                 if self._sem and not self._sem.acquire(timeout=0.0):  # pragma: no cover
-                    self._debug and log.debug("filling skipped on acquire")
+                    self._debug and log.debug("filling skipped on acquire")  # type: ignore
                     break
                 try:
                     self._new()
@@ -398,11 +400,11 @@ class Pool:
                     log.error(f"new object failed: {e}")
                 if self._sem:
                     self._sem.release()
-            self._debug and log.debug(f"filling {tocreate} objects done")
+            self._debug and log.debug(f"filling {tocreate} objects done")  # type: ignore
 
     def _empty(self):
         """Empty current todel."""
-        self._debug and log.debug(f"deleting {len(self._todel)} objects")
+        self._debug and log.debug(f"deleting {len(self._todel)} objects")  # type: ignore
         with self._lock:
             destroys = list(self._todel)
             self._todel.clear()
@@ -425,7 +427,7 @@ class Pool:
 
     def _create(self):
         """Create a new object (low-level)."""
-        self._debug and log.debug(f"creating new obj with {self._fun}")
+        self._debug and log.debug(f"creating new obj with {self._fun}")  # type: ignore
         with self._lock:
             self._ncreating += 1
         # this may fail
@@ -440,8 +442,9 @@ class Pool:
 
     def _new(self):
         """Create a new available object."""
+        # this may fail
         obj = self._create()
-        # on success
+        # on success, the object is availble
         if self._opener:
             try:
                 self._opener(obj)
@@ -519,7 +522,7 @@ class Pool:
                 # the acquired token will be released at the end of ret()
                 if not self._sem.acquire(timeout=timeout if timeout else self._timeout):
                     raise TimeOut(f"timeout after {timeout}")
-                self._debug and log.debug("get: 1")
+                self._debug and log.debug("get: 1")  # type: ignore
             with self._lock:
                 if not self._avail:
                     try:
@@ -527,7 +530,7 @@ class Pool:
                     except Exception as e:  # pragma: no cover
                         log.error(f"object creation failed: {e}")
                         if self._sem:
-                            self._debug and log.debug("get: -1")
+                            self._debug and log.debug("get: -1")  # type: ignore
                             self._sem.release()
                         raise
                 obj = self._avail.pop()
@@ -562,7 +565,7 @@ class Pool:
                 self._avail.add(obj)
                 self._uses[obj].last_ret = self._now()
         if self._sem:  # release token acquired in get()
-            self._debug and log.debug("ret: -1")
+            self._debug and log.debug("ret: -1")  # type: ignore
             self._sem.release()
         self._empty()
         self._fill()
@@ -570,11 +573,9 @@ class Pool:
     @contextmanager
     def obj(self, timeout=None):
         """Extract one object from the pool in a `with` scope."""
-        try:
-            o = self.get(timeout)
-            yield o
-        finally:
-            self.ret(o)
+        o = self.get(timeout)
+        yield o
+        self.ret(o)
 
 
 class Proxy:
@@ -597,8 +598,7 @@ class Proxy:
 
     class Local(object):
         """Dumb storage class for shared scope."""
-
-        pass
+        obj: Any
 
     class Scope(Enum):
         """Granularity of object sharing.
@@ -654,7 +654,7 @@ class Proxy:
 
     def _set_obj(self, obj):
         """Set current wrapped object."""
-        self._debug and log.debug(f"Setting proxy to {obj} ({type(obj)})")
+        self._debug and log.debug(f"Setting proxy to {obj} ({type(obj)})")  # type: ignore
         self._scope = Proxy.Scope.SHARED
         self._fun = None
         self._pool = None
@@ -716,7 +716,7 @@ class Proxy:
         """Get current wrapped object, possibly creating it."""
         # handle creation
         if self._fun and not hasattr(self._local, "obj"):
-            if self._pool_max_size is not None:
+            if self._pool:
                 # sync on pool to extract a consistent nobjs
                 with self._pool._lock:
                     self._local.obj = self._pool.get(timeout=timeout)
@@ -729,7 +729,7 @@ class Proxy:
     # FIXME how to do that automatically when the thread/whatever ends?
     def _ret_obj(self):
         """Return current wrapped object to internal pool."""
-        if self._pool_max_size is not None and hasattr(self._local, "obj"):
+        if self._pool and hasattr(self._local, "obj"):
             self._pool.ret(self._local.obj)
             delattr(self._local, "obj")
         # else just ignore

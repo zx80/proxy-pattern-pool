@@ -25,11 +25,17 @@ check.pyright: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	pyright $(MODULE).py
 
+IGNORE = E227,E402,E501
+
+.PHONY: check.ruff
+check.ruff: $(VENV)
+	[ "$(VENV)" ] && source $(VENV)/bin/activate
+	ruff check --ignore=$(IGNORE) $(MODULE).py
+
 .PHONY: check.flake8
 check.flake8: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
-	# flake8 --ignore=E127,E402,E501,F401 $(MODULE).py
-	flake8 --ignore=E127,E128,E227,E402,E501 $(MODULE).py
+	flake8 --ignore=E127,E128,$(IGNORE) $(MODULE).py
 
 .PHONY: check.black
 check.black: $(VENV)
@@ -55,7 +61,7 @@ check.pymarkdown: $(VENV)
 
 # check.black check.pyright
 .PHONY: check
-check: check.mypy check.pymarkdown check.flake8 check.pytest check.coverage
+check: check.mypy check.pyright check.pymarkdown check.ruff check.pytest check.coverage
 
 .PHONY: clean clean.venv
 clean:

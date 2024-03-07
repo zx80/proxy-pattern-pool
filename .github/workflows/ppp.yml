@@ -31,10 +31,14 @@ jobs:
     # Checks
     - name: Check with mypy
       run: make VENV= check.mypy
+    - name: Check with pyright
+      run: make VENV= check.pyright
     # - name: Check with black
     #  run: black --check ProxyPatternPool.py
-    - name: Check with flake8
-      run: make VENV= check.flake8
+    # - name: Check with flake8
+    #   run: make VENV= check.flake8
+    - name: Check with ruff
+      run: make VENV= check.ruff
     - name: Check with pytest
       run: make VENV= check.pytest
     - name: Check with coverage
