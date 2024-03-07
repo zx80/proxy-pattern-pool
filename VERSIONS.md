@@ -4,6 +4,10 @@
 
 - more stats?
 
+## 9.7 on ?
+
+Fix detection of the debugging level status.
+
 ## 9.6 on 2024-03-07
 
 Add more guarded debugging traces.

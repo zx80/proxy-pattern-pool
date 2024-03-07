@@ -141,9 +141,9 @@ class Pool:
         log_level: int|None = None,
     ):
         # debugging
-        self._debug = (log_level is not None and log_level == logging.DEBUG)
         if log_level is not None:
             log.setLevel(log_level)
+        self._debug = (log.getEffectiveLevel() == logging.DEBUG)
         self._tracer = tracer
         self._started = datetime.datetime.now()
         self._started_ts = datetime.datetime.timestamp(self._started)
