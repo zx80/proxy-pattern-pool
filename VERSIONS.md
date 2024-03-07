@@ -7,7 +7,7 @@
 
 ## 9.6 on ?
 
-Add more debugging traces.
+Add more guarded debugging traces.
 
 ## 9.5 on 2024-03-03
 

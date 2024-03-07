@@ -365,8 +365,7 @@ class Pool:
             with self._lock:
                 # normal round is done under lock, it must be fast!
                 try:
-                    if log.getEffectiveLevel() == logging.DEBUG:
-                        log.debug(str(self))
+                    self._debug and log.debug(str(self))
                     self._hkRound()
                 except Exception as e:  # pragma: no cover
                     self._hk_errors += 1
@@ -638,6 +637,7 @@ class Proxy:
         - log_level: set logging level for local logger.
         """
         # scope encodes the expected object unicity or multiplicity
+        self._debug = (log_level == logging.DEBUG)
         if log_level is not None:
             log.setLevel(log_level)
         self._scope = (
@@ -654,7 +654,7 @@ class Proxy:
 
     def _set_obj(self, obj):
         """Set current wrapped object."""
-        log.debug(f"Setting proxy to {obj} ({type(obj)})")
+        self._debug and log.debug(f"Setting proxy to {obj} ({type(obj)})")
         self._scope = Proxy.Scope.SHARED
         self._fun = None
         self._pool = None
