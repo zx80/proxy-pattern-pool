@@ -516,34 +516,32 @@ class Pool:
 
     def get(self, timeout=None):
         """Get a object from the pool, possibly creating one if needed."""
-        # FIXME why while?
-        while True:
-            if self._sem:  # ensure that  we do not go over max_size
-                # the acquired token will be released at the end of ret()
-                if not self._sem.acquire(timeout=timeout if timeout else self._timeout):
-                    raise TimeOut(f"timeout after {timeout}")
-                self._debug and log.debug("get: 1")  # type: ignore
-            with self._lock:
-                if not self._avail:
-                    try:
-                        self._new()
-                    except Exception as e:  # pragma: no cover
-                        log.error(f"object creation failed: {e}")
-                        if self._sem:
-                            self._debug and log.debug("get: -1")  # type: ignore
-                            self._sem.release()
-                        raise
-                obj = self._avail.pop()
-                self._using.add(obj)
-                self._nuses += 1
-                self._uses[obj].uses += 1
-                self._uses[obj].last_get = self._now()
-            if self._getter:
+        if self._sem:  # ensure that  we do not go over max_size
+            # the acquired token will be released at the end of ret()
+            if not self._sem.acquire(timeout=timeout if timeout else self._timeout):
+                raise TimeOut(f"timeout after {timeout}")
+            self._debug and log.debug("get: 1")  # type: ignore
+        with self._lock:
+            if not self._avail:
                 try:
-                    self._getter(obj)
-                except Exception as e:
-                    log.error(f"exception in getter: {e}")
-            return obj
+                    self._new()
+                except Exception as e:  # pragma: no cover
+                    log.error(f"object creation failed: {e}")
+                    if self._sem:
+                        self._debug and log.debug("get: -1")  # type: ignore
+                        self._sem.release()
+                    raise
+            obj = self._avail.pop()
+            self._using.add(obj)
+            self._nuses += 1
+            self._uses[obj].uses += 1
+            self._uses[obj].last_get = self._now()
+        if self._getter:
+            try:
+                self._getter(obj)
+            except Exception as e:
+                log.error(f"exception in getter: {e}")
+        return obj
 
     def ret(self, obj):
         """Return object to pool."""
@@ -719,6 +717,7 @@ class Proxy:
             if self._pool:
                 # sync on pool to extract a consistent nobjs
                 with self._pool._lock:
+                    # this can raise a TimeOut or other error
                     self._local.obj = self._pool.get(timeout=timeout)
                     self._nobjs = self._pool._nobjs
             else:  # no pool
@@ -726,26 +725,32 @@ class Proxy:
                 self._nobjs += 1
         return self._local.obj
 
+    def _has_obj(self):
+        """Tell whether an object is currently available."""
+        return hasattr(self._local, "obj") and self._local.obj is not None
+
     # FIXME how to do that automatically when the thread/whatever ends?
     def _ret_obj(self):
         """Return current wrapped object to internal pool."""
         if self._pool and hasattr(self._local, "obj"):
-            self._pool.ret(self._local.obj)
+            if self._local.obj is not None:
+                self._pool.ret(self._local.obj)
             delattr(self._local, "obj")
         # else just ignore
 
     def __getattr__(self, item):
-        """Forward everything unknown to contained object."""
+        """Forward everything unknown to contained object.
+
+        This method does the actual proxy work!
+        """
         return self._get_obj().__getattribute__(item)
 
     @contextmanager
     def _obj(self, timeout=None):
         """Get a object in a `with` scope."""
-        try:
-            o = self._get_obj(timeout=timeout)
-            yield o
-        finally:
-            self._ret_obj()
+        # if this may fail, there is nothing to return
+        yield self._get_obj(timeout=timeout)
+        self._ret_obj()
 
     # also forward a few special methods
     def __str__(self):

@@ -7,6 +7,7 @@
 ## 9.7 on ?
 
 Fix detection of the debugging level status.
+Add `_has_obj` method to test if an error occured on get.
 
 ## 9.6 on 2024-03-07
 

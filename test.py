@@ -107,6 +107,7 @@ def test_proxy_pool_threads():
 
     def run_1(i: int):
         r = str(ref)  # get previous object #0
+        assert ref._has_obj()
         event.set()
         assert r == str(i)
         # ref._ret_obj()  # NOT RETURNED TO POOL
@@ -114,6 +115,7 @@ def test_proxy_pool_threads():
     def run_2(i: int):
         event.wait()
         r = str(ref)  # generate a new object #1
+        assert ref._has_obj()
         assert r == str(i)
         # ref._ret_obj()  # NOT RETURNED TO POOL
 
@@ -131,6 +133,7 @@ def test_proxy_pool_threads():
         ref._get_obj(timeout=0.1)  # failed attempt at generating #2
         assert False, "must reach max_size"
     except ppp.TimeOut as e:
+        assert not ref._has_obj()
         assert "timeout after" in str(e)
     del ref
 

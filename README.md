@@ -78,6 +78,10 @@ return the object when not needed anymore by calling `_ret_obj` explicitely.
 This is useful for code which keeps creating new threads, eg `werkzeug`.
 For a database connection, a good time to do that is just after a `commit`.
 
+The proxy has a `_has_obj` method to test whether an object is available
+without extracting anything from the pool: this is useful to test whether
+returning the object is needed in some error handling pattern.
+
 The `Pool` class manage a pool of objects in a thread-safe way.
 Its constructor expects the following parameters:
 
