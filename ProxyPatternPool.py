@@ -244,8 +244,11 @@ class Pool:
                 "min_size": self._min_size,
                 "max_size": self._max_size,
                 "max_use": self._max_use,
-                "delay": self._delay,
                 "timeout": self._timeout,
+                "delay": self._delay,
+                "max_avail_delay": self._max_avail_delay,
+                "max_using_delay_kill": self._max_using_delay_kill,
+                "max_using_delay_warn": self._max_using_delay_warn,
                 "health_freq": self._health_freq,
                 # pool status
                 "now": now,
