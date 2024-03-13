@@ -65,7 +65,7 @@ check: check.mypy check.pyright check.pymarkdown check.ruff check.pytest check.c
 
 .PHONY: clean clean.venv
 clean:
-	$(RM) -r __pycache__ */__pycache__ dist build .mypy_cache .pytest_cache .coverage htmlcov
+	$(RM) -r __pycache__ */__pycache__ dist build .mypy_cache .pytest_cache .coverage htmlcov .ruff_cache
 	$(RM) $(F.pdf)
 
 clean.venv: clean
