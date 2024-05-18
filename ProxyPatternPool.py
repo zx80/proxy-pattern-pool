@@ -54,13 +54,16 @@ class Pool:
     """Thread-safe pool of something, created on demand.
 
     Mandatory parameter:
+
     - fun: function to create objects on demand, called with the creation number.
 
     Pool size management parameters:
+
     - max_size: maximum size of pool, 0 for unlimited.
     - min_size: minimum size of pool.
 
     Recycling parameters:
+
     - max_use: how many times to use an object, 0 for unlimited.
     - max_avail_delay: remove objects if unused for this secs, 0.0 for unlimited.
     - max_using_delay: warn if object is kept for more than this time, 0.0 for no warning.
@@ -70,6 +73,7 @@ class Pool:
     - health_freq: check health this every round, default is 1.
 
     Hook parameters:
+
     - opener: hook called on object creation.
     - getter: hook called on object pool extraction.
     - retter: hook called on object pool return.
@@ -79,6 +83,7 @@ class Pool:
     - health: hook called to check for an available object health.
 
     Miscellaneous parameters:
+
     - timeout: give-up waiting after this time, None for no timeout.
     - log_level: set logging level for local logger.
 
@@ -113,6 +118,7 @@ class Pool:
 
     @dataclass
     class UseInfo:
+        """Stats about pool item usage."""
         uses: int
         last_get: float
         last_ret: float
@@ -150,7 +156,7 @@ class Pool:
         # objects
         self._fun = fun
         # statistics
-        self._nobjs = 0       # current number of objects
+        self._nobjs = 0       # current number of objects managed in pool
         self._nuses = 0       # cumulated number of uses (successful get)
         self._ncreating = 0   # number of creation attempts
         self._ncreated = 0    # number of created objects
@@ -162,10 +168,10 @@ class Pool:
         self._nrecycled = 0   # number of long time avail deletes
         self._nwornout = 0    # number of max_use-d objects
         self._ndestroys = 0   # number of objects actually destroyed
-        self._hk_rounds = 0   # number of house keeper rounds
         self._hc_rounds = 0   # number of health check rounds
-        self._hk_errors = 0   # number of house keeping errors
         self._hc_errors = 0   # number of heath check errors
+        self._hk_rounds = 0   # number of house keeper rounds
+        self._hk_errors = 0   # number of house keeping errors
         self._hk_time = 0.0   # cumulated time spent in house keeping
         self._hk_last = 0.0   # last time a house keeping round started
         # pool management
@@ -220,12 +226,13 @@ class Pool:
     def __stats_data(self, obj, now):
         """Generate stats data for obj, under lock."""
         data = {}
-        if self._stats:
+        if self._stats:  # with stat hook
             data["stats"] = self._stats(obj)
-        elif self._tracer:
+        elif self._tracer:  # with tracer hook
             data["trace"] = self._tracer(obj)
-        else:
+        else:  # with string
             data["str"] = str(obj)
+        # also add with usage data if available
         if obj in self._uses:
             suo = self._uses[obj]
             data.update(uses=suo.uses, last_get=suo.last_get - now, last_ret=suo.last_ret - now)
@@ -275,10 +282,10 @@ class Pool:
                 "ndestroys": self._ndestroys,
                 "nhealth": self._nhealth,
                 "bad_health": self._bad_health,
-                "hk_errors": self._hk_errors,
-                "hc_errors": self._hc_errors,
                 "hk_rounds": self._hk_rounds,
+                "hk_errors": self._hk_errors,
                 "hc_rounds": self._hc_rounds,
+                "hc_errors": self._hc_errors,
             }
 
     def __str__(self):
@@ -339,7 +346,7 @@ class Pool:
             objs = list(self._uses.keys())
         tracer = self._tracer or str
 
-        # not under lock
+        # not under lock so a stuck health checks won't freeze the pool
         for obj in objs:
             if self._borrow(obj):
                 healthy = True
@@ -355,7 +362,7 @@ class Pool:
                     log.error(f"bad health: {tracer(obj)}")
                     self._bad_health += 1
                     self._out(obj)
-                    self._todel.add(obj)
+                    self._todel.add(obj)  # unhealthy objects are just removed
             # else skipping obj in use
 
     def _houseKeeping(self):
@@ -383,8 +390,9 @@ class Pool:
             # possibly re-create objects
             self._fill()
             # update run time
-            self._hk_time += self._now() - self._hk_last
-            self._debug and log.debug("house keeper: round done")  # type: ignore
+            round_time = self._now() - self._hk_last
+            self._hk_time += round_time
+            self._debug and log.debug(f"house keeper: round done ({round_time})")  # type: ignore
 
     def _fill(self):
         """Create new available objects to reach min_size."""
@@ -521,7 +529,7 @@ class Pool:
         """Get a object from the pool, possibly creating one if needed."""
         if self._sem:  # ensure that  we do not go over max_size
             # the acquired token will be released at the end of ret()
-            if not self._sem.acquire(timeout=timeout if timeout else self._timeout):
+            if not self._sem.acquire(timeout=timeout or self._timeout):
                 raise TimeOut(f"timeout after {timeout}")
             self._debug and log.debug("get: 1")  # type: ignore
         with self._lock:
