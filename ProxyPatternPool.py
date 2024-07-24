@@ -175,6 +175,7 @@ class Pool:
         self._hk_time = 0.0   # cumulated time spent in house keeping
         self._hk_last = 0.0   # last time a house keeping round started
         # pool management
+        self._shutdown = False
         self._timeout = timeout
         self._max_size = max_size
         self._min_size = min_size
@@ -266,6 +267,7 @@ class Pool:
                 "running": now - self._started_ts,
                 "rel_hk_last": self._hk_last - now,
                 "time_per_hk": self._hk_time / max(self._hk_rounds, 1),
+                "shutdown": self._shutdown,
                 # detailed per-object stats
                 "avail": [self.__stats_data(obj, now) for obj in self._avail],
                 "using": [self.__stats_data(obj, now) for obj in self._using],
@@ -346,7 +348,7 @@ class Pool:
             objs = list(self._uses.keys())
         tracer = self._tracer or str
 
-        # not under lock so a stuck health checks won't freeze the pool
+        # not under lock so a stuck health check won't freeze the pool
         for obj in objs:
             if self._borrow(obj):
                 healthy = True
@@ -370,7 +372,7 @@ class Pool:
 
         log.info(f"housekeeper running every {self._delay}")
 
-        while True:
+        while not self._shutdown:
             time.sleep(self._delay)
             self._hk_last = self._now()
             self._debug and log.debug("house keeper: round start")  # type: ignore
@@ -412,6 +414,19 @@ class Pool:
                 if self._sem:
                     self._sem.release()
             self._debug and log.debug(f"filling {tocreate} objects done")  # type: ignore
+
+    def shutdown(self, delay: float = 0.0):
+        """Shutdown pool (stop housekeeper, close all objects)."""
+        self._debug and log.debug("shutting down pool")  # type: ignore
+        self._shutdown = True
+        self._min_size = 0
+        if self._housekeeper:
+            self._housekeeper.join(delay)
+            if self._housekeeper.is_alive():  # pragma: no cover
+                log.warning("shutting down pool with live housekeeper")
+            del self._housekeeper
+            self._housekeeper = None  # forget thread
+        self.__delete__()
 
     def _empty(self):
         """Empty current todel."""
@@ -527,6 +542,8 @@ class Pool:
 
     def get(self, timeout=None):
         """Get a object from the pool, possibly creating one if needed."""
+        if self._shutdown:  # pragma: no cover
+            raise PoolException("Pool is shutting down")
         if self._sem:  # ensure that  we do not go over max_size
             # the acquired token will be released at the end of ret()
             if not self._sem.acquire(timeout=timeout or self._timeout):

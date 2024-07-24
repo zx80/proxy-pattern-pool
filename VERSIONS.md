@@ -2,9 +2,10 @@
 
 ## TODO
 
-## ? on ?
+## 10.0 on ?
 
 Improve doc and source comments.
+Add `shutdown` on `Pool`.
 
 ## 9.7 on 2024-03-08
 

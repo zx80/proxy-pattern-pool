@@ -269,6 +269,7 @@ def test_ogrc():
     assert isinstance(pool.stats(), dict)
     pool.ret(t1)
     pool.ret(t2)
+    pool.shutdown()
 
 
 health_count = 0
@@ -286,3 +287,4 @@ def test_health():
                     delay=0.4)
     time.sleep(1.0)  # each hk round should remove half of the objects
     assert pool._ncreated >= 20
+    pool.shutdown()
