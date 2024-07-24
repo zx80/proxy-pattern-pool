@@ -6,6 +6,7 @@
 
 Improve doc and source comments.
 Add `shutdown` on `Pool`.
+Add `ruff` check.
 
 ## 9.7 on 2024-03-08
 
