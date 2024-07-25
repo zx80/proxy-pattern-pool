@@ -2,7 +2,7 @@
 
 ## TODO
 
-## 10.0 on ?
+## 10.0 on 2024-07-25
 
 Improve doc and source comments.
 Add `shutdown` on `Pool`.
