@@ -2,6 +2,10 @@
 
 ## TODO
 
+## 10.1 on ?
+
+Improve error message.
+
 ## 10.0 on 2024-07-25
 
 Improve doc and source comments.
