@@ -547,7 +547,7 @@ class Pool:
         if self._sem:  # ensure that  we do not go over max_size
             # the acquired token will be released at the end of ret()
             if not self._sem.acquire(timeout=timeout or self._timeout):
-                raise TimeOut(f"timeout after {timeout}")
+                raise TimeOut(f"sem timeout after {timeout or self._timeout}")
             self._debug and log.debug("get: 1")  # type: ignore
         with self._lock:
             if not self._avail:
