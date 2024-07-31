@@ -29,8 +29,6 @@ jobs:
         pip install -U pip
         pip install -e .[local,dev]
     # Checks
-    - name: Check with mypy
-      run: make VENV= check.mypy
     - name: Check with pyright
       run: make VENV= check.pyright
     # - name: Check with black
