@@ -4,6 +4,9 @@ Generic Proxy Pattern Pool for Python.
 This code is public domain.
 """
 
+# silence warning about debug code which shows semaphore internals
+# pyright: reportAttributeAccessIssue=false
+
 from typing import Callable, Any
 from enum import Enum
 from dataclasses import dataclass
@@ -123,6 +126,9 @@ class Pool:
         last_get: float
         last_ret: float
 
+    # FIXME should use a lock?
+    _created: int = 0
+
     def __init__(
         self,
         fun: FunHook,
@@ -146,6 +152,8 @@ class Pool:
         tracer: TraceHook|None = None,
         log_level: int|None = None,
     ):
+        Pool._created += 1
+        self._id = Pool._created
         # debugging
         if log_level is not None:
             log.setLevel(log_level)
@@ -247,6 +255,7 @@ class Pool:
 
             # generic info
             return {
+                "id": self._id,
                 # pool configuration
                 "started": self._started.isoformat(),
                 "min_size": self._min_size,
@@ -375,11 +384,11 @@ class Pool:
         while not self._shutdown:
             time.sleep(self._delay)
             self._hk_last = self._now()
-            self._debug and log.debug("house keeper: round start")  # type: ignore
+            _ = self._debug and log.debug("house keeper: round start")
             with self._lock:
                 # normal round is done under lock, it must be fast!
                 try:
-                    self._debug and log.debug(str(self))  # type: ignore
+                    _ = self._debug and log.debug(str(self))
                     self._hkRound()
                 except Exception as e:  # pragma: no cover
                     self._hk_errors += 1
@@ -394,18 +403,18 @@ class Pool:
             # update run time
             round_time = self._now() - self._hk_last
             self._hk_time += round_time
-            self._debug and log.debug(f"house keeper: round done ({round_time})")  # type: ignore
+            _ = self._debug and log.debug(f"house keeper: round done ({round_time})")
 
     def _fill(self):
         """Create new available objects to reach min_size."""
         with self._lock:
             tocreate = self._min_size - self._nobjs
         if tocreate > 0:
-            self._debug and log.debug(f"filling {tocreate} objects")  # type: ignore
+            _ = self._debug and log.debug(f"filling {tocreate} objects")
             for _ in range(tocreate):
                 # acquire a token to avoid overshooting max_size
                 if self._sem and not self._sem.acquire(timeout=0.0):  # pragma: no cover
-                    self._debug and log.debug("filling skipped on acquire")  # type: ignore
+                    _ = self._debug and log.debug("filling skipped on acquire")
                     break
                 try:
                     self._new()
@@ -413,11 +422,11 @@ class Pool:
                     log.error(f"new object failed: {e}")
                 if self._sem:
                     self._sem.release()
-            self._debug and log.debug(f"filling {tocreate} objects done")  # type: ignore
+            _ = self._debug and log.debug(f"filling {tocreate} objects done")
 
     def shutdown(self, delay: float = 0.0):
         """Shutdown pool (stop housekeeper, close all objects)."""
-        self._debug and log.debug("shutting down pool")  # type: ignore
+        _ = self._debug and log.debug("shutting down pool")
         self._shutdown = True
         self._min_size = 0
         if self._housekeeper:
@@ -430,13 +439,14 @@ class Pool:
 
     def _empty(self):
         """Empty current todel."""
-        self._debug and log.debug(f"deleting {len(self._todel)} objects")  # type: ignore
-        with self._lock:
-            destroys = list(self._todel)
-            self._todel.clear()
-            self._ndestroys += len(destroys)
-        for obj in destroys:
-            self._destroy(obj)
+        if self._todel:
+            _ = self._debug and log.debug(f"deleting {len(self._todel)} objects")
+            with self._lock:
+                destroys = list(self._todel)
+                self._todel.clear()
+                self._ndestroys += len(destroys)
+            for obj in destroys:
+                self._destroy(obj)
 
     def __delete__(self):
         """This should be done automatically, but eventually."""
@@ -453,7 +463,7 @@ class Pool:
 
     def _create(self):
         """Create a new object (low-level)."""
-        self._debug and log.debug(f"creating new obj with {self._fun}")  # type: ignore
+        _ = self._debug and log.debug(f"creating new obj with {self._fun}")
         with self._lock:
             self._ncreating += 1
         # this may fail
@@ -519,16 +529,21 @@ class Pool:
 
         If the object is not available, _None_ is returned, this is just best effort.
         """
-        if self._sem and not self._sem.acquire(timeout=0.0):  # pragma: no cover
-            return None
+        if self._sem:
+            if self._sem.acquire(timeout=0.0):  # pragma: no cover
+                _ = self._debug and log.debug(f"sem borrow A {self._sem._value}/{self._sem._initial_value}")
+            else:  # pragma: no cover
+                return None
         with self._lock:
             if obj in self._avail:
                 self._avail.remove(obj)
                 self._using.add(obj)
                 self._nborrows += 1
                 return obj
-            else:  # pragma: no cover
-                return None
+            if self._sem:  # pragma: no cover
+                self._sem.release()
+                _ = self._debug and log.debug(f"sem borrow R {self._sem._value}/{self._sem._initial_value}")
+        return None  # pragma: no cover
 
     def _return(self, obj):
         """Return borrowed object."""
@@ -539,16 +554,18 @@ class Pool:
             self._nreturns += 1
         if self._sem:  # pragma: no cover
             self._sem.release()
+            _ = self._debug and log.debug(f"sem return R {self._sem._value}/{self._sem._initial_value}")
 
     def get(self, timeout=None):
         """Get a object from the pool, possibly creating one if needed."""
         if self._shutdown:  # pragma: no cover
             raise PoolException("Pool is shutting down")
-        if self._sem:  # ensure that  we do not go over max_size
+        if self._sem:  # ensure that we do not go over max_size
             # the acquired token will be released at the end of ret()
+            # the semaphore acts as a gate keeper to the max_size connections
             if not self._sem.acquire(timeout=timeout or self._timeout):
                 raise TimeOut(f"sem timeout after {timeout or self._timeout}")
-            self._debug and log.debug("get: 1")  # type: ignore
+            _ = self._debug and log.debug(f"sem get A {self._sem._value}/{self._sem._initial_value}")
         with self._lock:
             if not self._avail:
                 try:
@@ -556,8 +573,8 @@ class Pool:
                 except Exception as e:  # pragma: no cover
                     log.error(f"object creation failed: {e}")
                     if self._sem:
-                        self._debug and log.debug("get: -1")  # type: ignore
                         self._sem.release()
+                        _ = self._debug and log.debug(f"sem get R {self._sem._value}/{self._sem._initial_value}")
                     raise
             obj = self._avail.pop()
             self._using.add(obj)
@@ -590,9 +607,9 @@ class Pool:
                 self._using.remove(obj)
                 self._avail.add(obj)
                 self._uses[obj].last_ret = self._now()
-        if self._sem:  # release token acquired in get()
-            self._debug and log.debug("ret: -1")  # type: ignore
-            self._sem.release()
+            if self._sem:  # release token acquired in get()
+                self._sem.release()
+                _ = self._debug and log.debug(f"sem ret R {self._sem._value}/{self._sem._initial_value}")
         self._empty()
         self._fill()
 
@@ -680,7 +697,7 @@ class Proxy:
 
     def _set_obj(self, obj):
         """Set current wrapped object."""
-        self._debug and log.debug(f"Setting proxy to {obj} ({type(obj)})")  # type: ignore
+        _ = self._debug and log.debug(f"Setting proxy to {obj} ({type(obj)})")
         self._scope = Proxy.Scope.SHARED
         self._fun = None
         self._pool = None

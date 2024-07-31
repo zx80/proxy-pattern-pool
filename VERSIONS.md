@@ -2,9 +2,13 @@
 
 ## TODO
 
-## 10.1 on ?
+## 10.1 on 2024-07-31
 
-Improve error message.
+Improve error message and debugging code.
+Do not forget to release semaphore token in unlucky borrowing.
+Add id counter to help identify multiple pools.
+Drop `mypy` check.
+Release semaphore while still under lock to reduce the hold time.
 
 ## 10.0 on 2024-07-25
 
