@@ -391,7 +391,7 @@ class Pool:
         while not self._shutdown:
             time.sleep(self._delay)
             self._hk_last = self._now()
-            _ = self._debug and self._log_debug(f"housekeeper: round start")
+            _ = self._debug and self._log_debug("housekeeper: round start")
             with self._lock:
                 # normal round is done under lock, it must be fast!
                 try:
