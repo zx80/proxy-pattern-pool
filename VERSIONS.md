@@ -2,6 +2,11 @@
 
 ## TODO
 
+## 10.2 on 2024-08-01
+
+Fix blocking conditions due to improper locking from `Proxy`.
+Improve debugging experience.
+
 ## 10.1 on 2024-07-31
 
 Improve error message and debugging code.

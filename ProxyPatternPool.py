@@ -207,7 +207,9 @@ class Pool:
         self._todel: set[Any] = set()
         # keep track of usage count and last ops
         self._uses: dict[Any, Pool.UseInfo] = {}
-        # global pool re-entrant lock to manage "self" attributes
+        # global pool re-entrant lock to update "self" attributes
+        # NOTE under max_size a timeout may take effect in the next semaphore,
+        # the lock is only used to manage attributes, there is no timeout on it.
         self._lock = threading.RLock()
         self._sem: threading.Semaphore|None = None
         if self._max_size:
@@ -231,6 +233,9 @@ class Pool:
         # try to create the minimum number of objects
         # NOTE on errors we keep on running, hoping that it will work later…
         self._fill()
+
+    def _log_debug(self, m):
+        log.debug(f"{threading.get_ident()} {m}")
 
     def __stats_data(self, obj, now):
         """Generate stats data for obj, under lock."""
@@ -332,6 +337,7 @@ class Pool:
                     # killed objects where under using and sem
                     if self._sem:  # pragma: no cover
                         self._sem.release()
+                        _ = self._debug and self._log_debug(f"sem round R {self._sem._value}/{self._sem._initial_value}")
             if long_run or long_kill:
                 delay = (long_time / long_run) if long_run else 0.0
                 log.warning(f"long running objects: {long_run} ({delay} seconds, {long_kill} to kill)")
@@ -351,10 +357,11 @@ class Pool:
         """Health check, not under lock, only called from the hk thread."""
 
         assert self._health
-
         self._hc_rounds += 1
+
         with self._lock:
-            objs = list(self._uses.keys())
+            objs = list(self._avail)
+
         tracer = self._tracer or str
 
         # not under lock so a stuck health check won't freeze the pool
@@ -379,12 +386,12 @@ class Pool:
     def _houseKeeping(self):
         """Housekeeping thread."""
 
-        log.info(f"housekeeper running every {self._delay}")
+        log.info(f"housekeeper {threading.get_ident()} running every {self._delay}")
 
         while not self._shutdown:
             time.sleep(self._delay)
             self._hk_last = self._now()
-            _ = self._debug and log.debug("house keeper: round start")
+            _ = self._debug and self._log_debug(f"housekeeper: round start")
             with self._lock:
                 # normal round is done under lock, it must be fast!
                 try:
@@ -392,7 +399,7 @@ class Pool:
                     self._hkRound()
                 except Exception as e:  # pragma: no cover
                     self._hk_errors += 1
-                    log.error(f"housekeeping round error: {e}")
+                    log.error(f"housekeeper round error: {e}")
             # health check is done out of locking
             if self._health and self._hk_rounds % self._health_freq == 0:
                 self._health_check()
@@ -403,30 +410,35 @@ class Pool:
             # update run time
             round_time = self._now() - self._hk_last
             self._hk_time += round_time
-            _ = self._debug and log.debug(f"house keeper: round done ({round_time})")
+            _ = self._debug and self._log_debug(f"housekeeper: round done ({round_time})")
 
     def _fill(self):
         """Create new available objects to reach min_size."""
-        with self._lock:
+        if self._min_size > self._nobjs:
+            # NOTE no locking here, does not matter much
             tocreate = self._min_size - self._nobjs
-        if tocreate > 0:
-            _ = self._debug and log.debug(f"filling {tocreate} objects")
+            _ = self._debug and self._log_debug(f"filling {tocreate} objects")
             for _ in range(tocreate):
                 # acquire a token to avoid overshooting max_size
-                if self._sem and not self._sem.acquire(timeout=0.0):  # pragma: no cover
-                    _ = self._debug and log.debug("filling skipped on acquire")
-                    break
+                if self._sem:
+                    if self._sem.acquire(timeout=0.0):  # pragma: no cover
+                        _ = self._debug and self._log_debug(f"sem fill A {self._sem._value}/{self._sem._initial_value}")
+                    else:
+                        _ = self._debug and self._log_debug("filling skipped on acquire")
+                        break
                 try:
                     self._new()
                 except Exception as e:  # pragma: no cover
                     log.error(f"new object failed: {e}")
                 if self._sem:
+                    # whether it is created or not, the semaphore is released
                     self._sem.release()
-            _ = self._debug and log.debug(f"filling {tocreate} objects done")
+                    _ = self._debug and self._log.debug(f"sem fill R {self._sem._value}/{self._sem._initial_value}")
+            _ = self._debug and self._log_debug(f"filling {tocreate} objects done")
 
     def shutdown(self, delay: float = 0.0):
         """Shutdown pool (stop housekeeper, close all objects)."""
-        _ = self._debug and log.debug("shutting down pool")
+        _ = self._debug and self._log_debug("shutting down pool")
         self._shutdown = True
         self._min_size = 0
         if self._housekeeper:
@@ -440,7 +452,7 @@ class Pool:
     def _empty(self):
         """Empty current todel."""
         if self._todel:
-            _ = self._debug and log.debug(f"deleting {len(self._todel)} objects")
+            _ = self._debug and self._log_debug(f"deleting {len(self._todel)} objects")
             with self._lock:
                 destroys = list(self._todel)
                 self._todel.clear()
@@ -463,7 +475,7 @@ class Pool:
 
     def _create(self):
         """Create a new object (low-level)."""
-        _ = self._debug and log.debug(f"creating new obj with {self._fun}")
+        _ = self._debug and self._log_debug(f"creating new obj with {self._fun}")
         with self._lock:
             self._ncreating += 1
         # this may fail
@@ -531,7 +543,7 @@ class Pool:
         """
         if self._sem:
             if self._sem.acquire(timeout=0.0):  # pragma: no cover
-                _ = self._debug and log.debug(f"sem borrow A {self._sem._value}/{self._sem._initial_value}")
+                _ = self._debug and self._log_debug(f"sem borrow A {self._sem._value}/{self._sem._initial_value}")
             else:  # pragma: no cover
                 return None
         with self._lock:
@@ -540,9 +552,10 @@ class Pool:
                 self._using.add(obj)
                 self._nborrows += 1
                 return obj
+            # else we failed to borrow it, so release semaphore!
             if self._sem:  # pragma: no cover
                 self._sem.release()
-                _ = self._debug and log.debug(f"sem borrow R {self._sem._value}/{self._sem._initial_value}")
+                _ = self._debug and self._log_debug(f"sem borrow R {self._sem._value}/{self._sem._initial_value}")
         return None  # pragma: no cover
 
     def _return(self, obj):
@@ -552,9 +565,9 @@ class Pool:
             self._using.remove(obj)
             self._avail.add(obj)
             self._nreturns += 1
-        if self._sem:  # pragma: no cover
-            self._sem.release()
-            _ = self._debug and log.debug(f"sem return R {self._sem._value}/{self._sem._initial_value}")
+            if self._sem:  # pragma: no cover
+                self._sem.release()
+                _ = self._debug and self._log_debug(f"sem return R {self._sem._value}/{self._sem._initial_value}")
 
     def get(self, timeout=None):
         """Get a object from the pool, possibly creating one if needed."""
@@ -565,7 +578,7 @@ class Pool:
             # the semaphore acts as a gate keeper to the max_size connections
             if not self._sem.acquire(timeout=timeout or self._timeout):
                 raise TimeOut(f"sem timeout after {timeout or self._timeout}")
-            _ = self._debug and log.debug(f"sem get A {self._sem._value}/{self._sem._initial_value}")
+            _ = self._debug and self._log_debug(f"sem get A {self._sem._value}/{self._sem._initial_value}")
         with self._lock:
             if not self._avail:
                 try:
@@ -574,7 +587,7 @@ class Pool:
                     log.error(f"object creation failed: {e}")
                     if self._sem:
                         self._sem.release()
-                        _ = self._debug and log.debug(f"sem get R {self._sem._value}/{self._sem._initial_value}")
+                        _ = self._debug and self._log_debug(f"sem get R {self._sem._value}/{self._sem._initial_value}")
                     raise
             obj = self._avail.pop()
             self._using.add(obj)
@@ -609,7 +622,7 @@ class Pool:
                 self._uses[obj].last_ret = self._now()
             if self._sem:  # release token acquired in get()
                 self._sem.release()
-                _ = self._debug and log.debug(f"sem ret R {self._sem._value}/{self._sem._initial_value}")
+                _ = self._debug and self._log_debug(f"sem ret R {self._sem._value}/{self._sem._initial_value}")
         self._empty()
         self._fill()
 
@@ -756,16 +769,18 @@ class Proxy:
             raise ProxyException("Proxy must set either obj or fun")
 
     def _get_obj(self, timeout=None):
-        """Get current wrapped object, possibly creating it."""
-        # handle creation
+        """
+        Get current wrapped object, possibly creating it.
+
+        This mail fail on timeout or other pool errors.
+        """
         if self._fun and not hasattr(self._local, "obj"):
             if self._pool:
-                # sync on pool to extract a consistent nobjs
-                with self._pool._lock:
-                    # this can raise a TimeOut or other error
-                    self._local.obj = self._pool.get(timeout=timeout)
-                    self._nobjs = self._pool._nobjs
+                # this can raise a TimeOut or other error
+                self._local.obj = self._pool.get(timeout=timeout)
+                self._nobjs = self._pool._nobjs
             else:  # no pool
+                # handle creation
                 self._local.obj = self._fun(self._nobjs)
                 self._nobjs += 1
         return self._local.obj
