@@ -433,7 +433,7 @@ class Pool:
                 if self._sem:
                     # whether it is created or not, the semaphore is released
                     self._sem.release()
-                    _ = self._debug and self._log.debug(f"sem fill R {self._sem._value}/{self._sem._initial_value}")
+                    _ = self._debug and self._log_debug(f"sem fill R {self._sem._value}/{self._sem._initial_value}")
             _ = self._debug and self._log_debug(f"filling {tocreate} objects done")
 
     def shutdown(self, delay: float = 0.0):
