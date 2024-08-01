@@ -423,7 +423,7 @@ class Pool:
                 if self._sem:
                     if self._sem.acquire(timeout=0.0):  # pragma: no cover
                         _ = self._debug and self._log_debug(f"sem fill A {self._sem._value}/{self._sem._initial_value}")
-                    else:
+                    else:  # pragma: no cover
                         _ = self._debug and self._log_debug("filling skipped on acquire")
                         break
                 try:
