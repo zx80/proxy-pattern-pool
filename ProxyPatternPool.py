@@ -88,6 +88,7 @@ class Pool:
     Miscellaneous parameters:
 
     - timeout: give-up waiting after this time, None for no timeout.
+      this is only used when running with a bounded-size pool (``max_size``).
     - log_level: set logging level for local logger.
 
     The object life cycle is the following, with the corresponding hooks:
@@ -95,11 +96,12 @@ class Pool:
     - objects are created by calling ``fun``, after which ``opener`` is called.
     - when an object is extracted from the pool, ``getter`` is called.
     - when an object is returned to the pool, ``retter` is called.
+    - when an object is _borrowed_ for checking health, ``health`` is called.
     - when an object is removed from the pool, ``closer`` is called.
 
     Objects are created:
 
-    - when the number of available object is below ``min_size``.
+    - when the number of available object is below ``min_size`` for some reason.
     - when an object is requested, none is available, and the number of objects
       is below ``max_size``.
 
@@ -110,12 +112,12 @@ class Pool:
       of objects is strictly over ``min_size``.
     - when they are being used for too long (over ``max_using_delay_kill``).
     - when they reach the number of uses limit (``max_use``).
-    - when ``__delete__`` is called.
+    - when ``__delete__`` or ``shutdown`` is called.
 
     This infrastructure is not suitable for handling very short timeouts, and
-    will not be very precise. The using timeout kill is expensive as the object is
-    effectively destroyed (so for instance an underlying connection would be
-    lost) and will have to be re-created. This is not a replacement for
+    will not be very precise. The using timeout kill is expensive as the object
+    is effectively destroyed (so for instance an underlying network connection
+    would be lost) and will have to be re-created. This is not a replacement for
     carefully designing and monitoring application resource usage.
     """
 
