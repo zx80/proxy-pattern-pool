@@ -7,6 +7,7 @@ This code is public domain.
 # silence warning about debug code which shows semaphore internals
 # pyright: reportAttributeAccessIssue=false
 
+import os
 from typing import Callable, Any
 from enum import Enum
 from dataclasses import dataclass
@@ -113,6 +114,11 @@ class Pool:
     - when they are being used for too long (over ``max_using_delay_kill``).
     - when they reach the number of uses limit (``max_use``).
     - when ``__delete__`` or ``shutdown`` is called.
+
+    Environment:
+
+    - **PPP_WERKZEUG_WORKAROUND**: set when running with "flask --debug"
+      reload mode to avoid starting a useless pool housekeeping thread.
 
     This infrastructure is not suitable for handling very short timeouts, and
     will not be very precise. The using timeout kill is expensive as the object
@@ -228,16 +234,24 @@ class Pool:
         else:
             self._delay = 60.0 if self._health else 0.0
         assert not (self._health and self._delay == 0.0)
+        # NOTE avoid starting an empty thread under "flask --debug"
         self._housekeeper: threading.Thread|None = None
-        if self._delay:
-            self._housekeeper = threading.Thread(target=self._houseKeeping, daemon=True)
-            self._housekeeper.start()
-        # try to create the minimum number of objects
-        # NOTE on errors we keep on running, hoping that it will work later…
-        self._fill()
+        werkzeug_workaround = "PPP_WERKZEUG_WORKAROUND" in os.environ
+        skip_thread = (werkzeug_workaround and
+                       os.environ.get("WERKZEUG_RUN_MAIN", "false") != "true")
+        if not skip_thread:
+            if self._delay:
+                self._housekeeper = threading.Thread(target=self._houseKeeping, daemon=True)
+                self._housekeeper.start()
+            # try to create the minimum number of objects
+            # NOTE on errors we keep on running, hoping that it will work later:
+            # the pool attempts to be resilient to temporary server failures.
+            self._fill()
+        elif werkzeug_workaround:
+            log.warning("skipping housekeeper thread creation under werkzeug empty start…")
 
     def _log_debug(self, m):
-        log.debug(f"{threading.get_ident()} {m}")
+        log.debug(f"{os.getpid()}:{threading.get_ident()} {m}")
 
     def __stats_data(self, obj, now):
         """Generate stats data for obj, under lock."""
@@ -693,6 +707,8 @@ class Proxy:
         - fun: function to generated a per-thread/or-whatever wrapped object.
         - max_size: pool maximum size, 0 for unlimited, None for no pooling.
         - log_level: set logging level for local logger.
+
+        All other parameters are passed to the pool, if any.
         """
         # scope encodes the expected object unicity or multiplicity
         self._debug = (log_level == logging.DEBUG)

@@ -2,9 +2,11 @@
 
 ## TODO
 
-## ? on ?
+## 10.3 on 2024-08-02
 
 Improve documentation.
+Add workaround against `Flask --debug` initial reload, triggered by setting
+environment variable `PPP_WERKZEUG_WORKAROUND`.
 
 ## 10.2 on 2024-08-01
 
