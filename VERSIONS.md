@@ -2,6 +2,10 @@
 
 ## TODO
 
+## 11.0 on 2024-08-02
+
+Add delayed pool parameter initialization with `_set_pool`.
+
 ## 10.3 on 2024-08-02
 
 Improve documentation.

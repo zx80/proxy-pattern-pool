@@ -33,7 +33,12 @@ def test_proxy_threads():
     def gen_data(i):
         return f"data: {i}"
 
-    r = ppp.Proxy(fun=gen_data, max_size=None, closer=lambda o: o.close())
+    r = ppp.Proxy()
+
+    # delayed initializations
+    r._set_pool(max_size=None, closer=lambda o: o.close())
+    r._set_fun(fun=gen_data)
+
     assert r._nobjs == 0
     assert isinstance(r.__hash__(), int)
     assert r._nobjs == 1
@@ -78,7 +83,17 @@ def test_proxy_threads():
 
 
 def test_proxy_pool_direct():
-    ref = ppp.Proxy(fun=lambda i: i, max_size=2)
+    ref = ppp.Proxy()
+
+    # delayed initializations
+    ref._set_pool(max_size=2)
+    ref._set_fun(fun=lambda i: i)
+    try:
+        ref._set_pool(delay=1.0)
+        assert False, "must raise error"
+    except ppp.ProxyException as e:
+        assert "cannot override" in str(e)
+
     i = ref._get_obj()
     assert len(ref._pool._avail) == 0
     assert len(ref._pool._using) == 1

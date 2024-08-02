@@ -718,6 +718,7 @@ class Proxy:
             Proxy.Scope.SHARED if scope == Proxy.Scope.AUTO and obj else
             Proxy.Scope.THREAD if scope == Proxy.Scope.AUTO and fun else
             scope)  # fmt: skip
+        self._pool = None
         self._pool_max_size = max_size
         self._pool_kwargs = kwargs
         self._set(obj=obj, fun=fun, mandatory=False)
@@ -725,6 +726,15 @@ class Proxy:
             setattr(self, set_name, self._set)
             setattr(self, set_name + "_obj", self._set_obj)
             setattr(self, set_name + "_fun", self._set_fun)
+
+    def _set_pool(self, **kwargs):
+        """Override pool parameters."""
+        if self._pool:
+            raise ProxyException("cannot override pool parameters once initialized")
+        if "max_size" in kwargs:
+            self._pool_max_size = kwargs["max_size"]
+            del kwargs["max_size"]
+        self._pool_kwargs.update(**kwargs)
 
     def _set_obj(self, obj):
         """Set current wrapped object."""
