@@ -2,6 +2,10 @@
 
 ## TODO
 
+## 11.1 on ?
+
+Use `ProxyException` instead of `Exception` in one place.
+
 ## 11.0 on 2024-08-02
 
 Add delayed pool parameter initialization with `_set_pool`.

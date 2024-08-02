@@ -776,7 +776,7 @@ class Proxy:
 
             self._local = local()
         else:  # pragma: no cover
-            raise Exception(f"unexpected local scope: {self._scope}")
+            raise ProxyException(f"unexpected local scope: {self._scope}")
 
         return self
 
