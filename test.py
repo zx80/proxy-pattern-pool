@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import threading
@@ -288,3 +289,14 @@ def test_health():
     time.sleep(1.0)  # each hk round should remove half of the objects
     assert pool._ncreated >= 20
     pool.shutdown()
+    del pool
+
+def test_werkzeug_workaround():
+
+    os.environ["PPP_WERKZEUG_WORKAROUND"] = "1"
+    pool = ppp.Pool(fun = lambda n: f"fun={n}", min_size=1)
+    time.sleep(1.0)
+    # housekeeping not started and no filling
+    assert pool._housekeeper is None and pool._ncreated == 0
+    pool.shutdown()
+    del pool
