@@ -5,6 +5,7 @@
 ## 11.1 on ?
 
 Use `ProxyException` instead of `Exception` in one place.
+Activate _Pypy 3.10_ GitHub CI.
 
 ## 11.0 on 2024-08-02
 
