@@ -2,10 +2,12 @@
 
 ## TODO
 
-## 11.1 on ?
+- remove `eventlet` and `gevent` exclusions for Python 3.13 when possible.
+
+## 11.1 on 2024-08-03
 
 Use `ProxyException` instead of `Exception` in one place.
-Activate _Pypy 3.10_ GitHub CI.
+Activate _Pypy 3.10_ and _Python 3.13_ on GitHub CI.
 
 ## 11.0 on 2024-08-02
 
