@@ -3,7 +3,6 @@ name: ProxyPatternPool Package
 on:
   push:
     branches: [ main ]
-  # push_request: ?
 
 jobs:
   build:
