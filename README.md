@@ -1,6 +1,6 @@
 # Proxy Pattern Pool
 
-Generic Proxy and Pool Classes for Python.
+Generic Proxy and Pool classes for Python.
 
 ![Status](https://github.com/zx80/proxy-pattern-pool/actions/workflows/ppp.yml/badge.svg?branch=main&style=flat)
 ![Tests](https://img.shields.io/badge/tests-12%20✓-success)
@@ -42,18 +42,23 @@ This module provides two classes:
   expensive-to-create objects such as database connections. The above proxy
   object creates a pool automatically depending on its parameters.
 
-  Call `db._ret_obj()` to return the object to the pool when done with it.
+  Method `_ret_obj` **must** be called to return the object to the pool when
+  done with it.
+
+  This generic pool class can be used independently of the `Proxy` class.
 
 ## Documentation
 
-The `Proxy` class manages accesses to one or more objects, possibly using
+### Proxy
+
+Class `Proxy` manages accesses to one or more objects, possibly using
 a `Pool`, depending on the expected scope of said objects.
 
 The `Proxy` constructors expects the following parameters:
 
-- `obj` one *single* object `SHARED` between all threads.
-- `fun` one function called for object creation, each time it is needed,
-  for `THREAD` and `VERSATILE` scopes.
+- `obj` a *single* object `SHARED` between all threads.
+- `fun` a function called for object creation, each time it is needed,
+  for all other scopes.
 - `scope` object scope as defined by `Proxy.Scope`:
   - `SHARED` one shared object (process level)
   - `THREAD` one object per thread (`threading` implementation)
@@ -65,7 +70,7 @@ The `Proxy` constructors expects the following parameters:
   of a function was passed for the object.
 - `set_name` the name of a function to set the proxy contents,
   default is `set`. This parameter allows to avoid collisions with
-  the proxied methods.
+  the proxied methods, if necessary.
   It is used as a prefix to have `set_obj` and `set_fun` functions
   which allow to reset the internal `obj` or `fun`.
 - `log_level` set logging level, default *None* means no setting.
@@ -82,13 +87,15 @@ The proxy has a `_has_obj` method to test whether an object is available
 without extracting anything from the pool: this is useful to test whether
 returning the object is needed in some error handling pattern.
 
-The `Pool` class manage a pool of objects in a thread-safe way.
+### Pool
+
+Class `Pool` manages a pool of objects in a thread-safe way.
 Its constructor expects the following parameters:
 
 - `fun` how to create a new object; the function is passed the creation number.
-- `max_size` maximum size of pool, *0* for unlimited.
-- `min_size` minimum size of pool.
-- `timeout` maximum time to wait for something.
+- `max_size` maximum size of pool, *0* for unlimited (the default).
+- `min_size` minimum size of pool, that many are created and maintained in advance.
+- `timeout` maximum time to wait for something, only active under `max_size`.
 - `max_use` after how many usage to discard an object.
 - `max_avail_delay` when to discard an unused object.
 - `max_using_delay` when to warn about object kept for a long time.
@@ -154,7 +161,22 @@ Shared.init_app("hello world!")
 This module is rhetorical: because of the GIL Python is quite bad as a parallel
 language, so the point of creating threads which will mostly not really run in
 parallel is moot, thus the point of having a clever pool of stuff to be shared
-by these thread is even mooter!
+by these thread is even mooter! However, as the GIL is scheduled to go away
+in the coming years, starting from _Python 3.13_, it might start to make sense
+to have such a thing here!
+
+In passing, it is interesting to note that the driving motivation for getting
+read of the GIL is… _data science_. This tells something.
+In the past, people interested in parallelism, i.e. performance, say myself,
+would probably just turn away from this quite slow language.
+People from the networking (www) world would be satisfied with the adhoc
+asynchronous model, and/or just create many processes because
+in this context the need to communicate between workers is limited.
+Now come the data scientists, who are not that interested in programming, are
+happy with Python and its ecosystem, in particular with various ML libraries
+and the commodity of web-centric interfaces such as Jupyter. When confronted
+with a GIL-induced performance issue, they are more interested at fixing the
+problem than having to learn another language and port their stuff.
 
 Shared object *must* be returned to the pool to avoid depleting resources.
 This may require some active cooperation from the infrastructure which may
@@ -168,7 +190,7 @@ See Also:
 - [Eventlet db_pool](https://eventlet.net/doc/modules/db_pool.html)
   for pooling MySQL or Postgres database connexions.
 - [Discussion](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
-about database pool sizing (spoiler: small is beautiful).
+  about database pool sizing (spoiler: small is beautiful).
 
 ## License
 
