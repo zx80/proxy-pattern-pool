@@ -165,7 +165,7 @@ by these thread is even mooter! However, as the GIL is scheduled to go away
 in the coming years, starting from _Python 3.13_, it might start to make sense
 to have such a thing here!
 
-In passing, it is interesting to note that the formost
+In passing, it is interesting to note that the foremost
 [driving motivation](https://peps.python.org/pep-0703/) for getting
 read of the GIL is… _data science_. This tells something.
 In the past, people interested in parallelism, i.e. performance, say myself,
