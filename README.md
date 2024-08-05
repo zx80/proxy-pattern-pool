@@ -165,18 +165,19 @@ by these thread is even mooter! However, as the GIL is scheduled to go away
 in the coming years, starting from _Python 3.13_, it might start to make sense
 to have such a thing here!
 
-In passing, it is interesting to note that the driving motivation for getting
+In passing, it is interesting to note that the formost
+[driving motivation](https://peps.python.org/pep-0703/) for getting
 read of the GIL is… _data science_. This tells something.
 In the past, people interested in parallelism, i.e. performance, say myself,
 would probably just turn away from this quite slow language.
-People from the networking (www) world would be satisfied with the adhoc
+People from the networking www world would be satisfied with the adhoc
 asynchronous model, and/or just create many processes because
-in this context the need to communicate between workers is limited.
-Now come the data scientists, who are not that interested in programming, are
-happy with Python and its ecosystem, in particular with various ML libraries
-and the commodity of web-centric interfaces such as Jupyter. When confronted
-with a GIL-induced performance issue, they are more interested at fixing the
-problem than having to learn another language and port their stuff.
+in this context the need to communicate between active workers is limited.
+Now come the data scientist, who is not that interested in programming, is
+happy with Python and its ecosystem, in particular with the various ML libraries
+and the commodity of web-centric remote interfaces such as Jupyter. When
+confronted with a GIL-induced performance issue, they are more interested at
+fixing the problem than having to learn another language and port their stuff.
 
 Shared object *must* be returned to the pool to avoid depleting resources.
 This may require some active cooperation from the infrastructure which may
