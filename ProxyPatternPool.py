@@ -670,7 +670,8 @@ class Proxy:
 
     class Local(object):
         """Dumb storage class for shared scope."""
-        obj: Any
+        # FIXME coverage issue with Python 3.14
+        obj: Any  # pragma: no cover
 
     class Scope(Enum):
         """Granularity of object sharing.
