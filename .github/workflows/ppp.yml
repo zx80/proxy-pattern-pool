@@ -12,7 +12,8 @@ jobs:
       matrix:
         # 3.13: gevent is not supported yet
         # 3.13: greenlet (eventlet?) is not supported yet
-        python-version: ["3.10", "3.11", "3.12", "3.13", "pypy3.10"]
+        # 3.13/3.14: TODO trigger nogil tests when available!
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "pypy3.10"]
     steps:
     # Setup
     - uses: actions/checkout@v4
