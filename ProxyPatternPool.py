@@ -646,8 +646,10 @@ class Pool:
     def obj(self, timeout=None):
         """Extract one object from the pool in a `with` scope."""
         o = self.get(timeout)
-        yield o
-        self.ret(o)
+        try:
+            yield o
+        finally:
+            self.ret(o)
 
 
 class Proxy:

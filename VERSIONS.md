@@ -9,6 +9,7 @@
 
 - Enable _Python 3.14_ CI.
 - Improve documentation.
+- Improve `yield` pattern.
 
 ## 11.1 on 2024-08-03
 
