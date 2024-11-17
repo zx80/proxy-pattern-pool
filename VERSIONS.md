@@ -5,7 +5,7 @@
 - remove `eventlet` and `gevent` exclusions for Python 3.13 when possible.
 - suspend house keeping thread when nothing to do?
 
-## 11.2 on ?
+## 11.2 on 2024-11-17
 
 - Enable _Python 3.14_ CI.
 - Improve documentation.
