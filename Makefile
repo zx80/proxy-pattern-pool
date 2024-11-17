@@ -63,13 +63,20 @@ check.pymarkdown: $(VENV)
 .PHONY: check
 check: check.pyright check.pymarkdown check.ruff check.pytest check.coverage
 
-.PHONY: clean clean.venv
+.PHONY: clean
 clean:
 	$(RM) -r __pycache__ */__pycache__ dist build .mypy_cache .pytest_cache .coverage htmlcov .ruff_cache
 	$(RM) $(F.pdf)
 
+.PHONY: clean.venv
 clean.venv: clean
 	$(RM) -r venv *.egg-info
+
+.PHONY: clean.dev
+clean.dev: clean.venv
+
+.PHONY: dev
+dev: venv
 
 # for local testing
 venv:
