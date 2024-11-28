@@ -13,12 +13,14 @@ jobs:
         # 3.13: gevent is not supported yet
         # 3.13: greenlet (eventlet?) is not supported yet
         # 3.13/3.14: TODO trigger nogil tests when available!
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "pypy3.10"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.13t", "3.14", "3.14t", "pypy3.10"]
     steps:
     # Setup
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      # uses: actions/setup-python@v5
+      # FIXME cache: 'pip' # ???
+      uses: Quandsight-Labs/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
