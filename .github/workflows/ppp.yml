@@ -20,7 +20,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       # uses: actions/setup-python@v5
       # FIXME cache: 'pip' # ???
-      uses: Quandsight-Labs/setup-python@v5
+      uses: Quansight-Labs/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
