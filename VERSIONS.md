@@ -2,7 +2,7 @@
 
 ## TODO
 
-- remove `eventlet` and `gevent` exclusions for Python 3.13 when possible.
+- remove `gevent` exclusions for Python 3.13 when possible.
 - suspend house keeping thread when nothing to do?
 
 ## 11.3 on 2025-03-06
