@@ -28,10 +28,10 @@ package = "https://pypi.org/project/ProxyPatternPool/"
 py-modules = [ "ProxyPatternPool" ]
 
 [project.optional-dependencies]
-# NOTE greenlet has strange undeclared dependencies on import, eg "cryptography"
 local = [
   "werkzeug",
   "eventlet",
+  # NOTE not supported on 2025-03-06
   "gevent; python_version < '3.13'"
 ]
 dev = [ "mypy", "pyright", "flake8", "black", "ruff", "pytest", "coverage", "pymarkdownlnt" ]
