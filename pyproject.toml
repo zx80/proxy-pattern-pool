@@ -32,9 +32,9 @@ py-modules = [ "ProxyPatternPool" ]
 local = [
   "werkzeug",
   "eventlet; python_version < '3.13'",
-  "gevent; python_version < '3.13'",
-  # 2025-03-06: error: failed to run custom build command for cryptography-cffi v0.1.0
-  "cryptography; python_version != '3.13t'"
+  "gevent; python_version < '3.13'"
 ]
+# 2025-03-06 3.13t error: failed to run custom build command for cryptography-cffi v0.1.0
+crypto = [ "cryptography" ]
 dev = [ "mypy", "pyright", "flake8", "black", "ruff", "pytest", "coverage", "pymarkdownlnt" ]
 pub = [ "build", "wheel", "twine" ]
