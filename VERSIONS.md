@@ -5,11 +5,12 @@
 - remove `eventlet` and `gevent` exclusions for Python 3.13 when possible.
 - suspend house keeping thread when nothing to do?
 
-## ? on ?
+## 11.3 on 2025-03-06
 
-- Add convenient `dev` and `clean.dev` make targets.
 - Trace double return objects.
+- Enable _Python 3.13t_ CI with and without GIL.
 - Improve tests.
+- Add convenient `dev` and `clean.dev` make targets.
 
 ## 11.2 on 2024-11-17
 
