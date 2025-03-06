@@ -627,7 +627,12 @@ class Pool:
                 log.error(f"exception in retter: {e}")
         with self._lock:
             if obj not in self._using:
-                # FIXME issue a warning on multiple ret calls?
+                # multiple return, killed?
+                # NOTE cannot show object which could be in any state…
+                try:
+                    log.warning(f"unexpected object returned: {self._tracer(obj)}")
+                except Exception as e:
+                    log.error(f"exception in tracer on unexpected returned object")
                 return
             if self._max_use and self._uses[obj].uses >= self._max_use:
                 self._nwornout += 1
