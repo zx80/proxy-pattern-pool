@@ -123,8 +123,9 @@ class Pool:
     This infrastructure is not suitable for handling very short timeouts, and
     will not be very precise. The using timeout kill is expensive as the object
     is effectively destroyed (so for instance an underlying network connection
-    would be lost) and will have to be re-created. This is not a replacement for
-    carefully designing and monitoring application resource usage.
+    would be lost) and will have to be re-created, including potential
+    authentication costs. This is not a replacement for carefully designing and
+    monitoring application resource usage.
     """
 
     @dataclass
