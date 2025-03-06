@@ -156,7 +156,7 @@ def test_proxy_pool_threads():
 
 def test_pool_direct():
     # test max_use
-    pool = ppp.Pool(fun=lambda i: i, max_size=1, max_use=2)
+    pool = ppp.Pool(fun=lambda i: i, max_size=1, max_use=2, tracer=str)
     assert len(str(pool)) >= 10
     i = pool.get()
     assert i == 0
@@ -169,6 +169,7 @@ def test_pool_direct():
     i = pool.get()
     assert i == 1
     pool.ret(i)
+    assert isinstance(pool.stats(), dict)
     pool.__delete__()
 
 
@@ -193,6 +194,7 @@ def test_pool_class():
     t = pool.get()
     assert str(t) == "T(1)"
     pool.ret(t)
+    assert isinstance(pool.stats(), dict)
     pool.__delete__()
 
 
@@ -215,12 +217,12 @@ def test_pool_delay():
     pool.ret(t2)
     pool.__delete__()
     # using delay
-    pool = ppp.Pool(fun=lambda n: f"Hello {n}!", max_size=2, max_using_delay=0.3)
+    pool = ppp.Pool(fun=lambda n: f"Hello {n}!", max_size=2, max_using_delay=0.2)
     t1, t2 = pool.get(), pool.get()
     assert t1 == "Hello 0!" and t2 == "Hello 1!"
-    time.sleep(0.2)
+    time.sleep(0.1)
     pool.ret(t1)
-    time.sleep(0.3)
+    time.sleep(0.4)
     pool.ret(t2)
     pool.__delete__()
     # warning
@@ -270,37 +272,45 @@ def test_local():
 
 # test opener/getter/retter/closer
 def test_ogrc():
+
     def trace(s, o):
         log.debug(f"{o}: {s}")
         raise Exception("{s} coverage!")
+
     pool = ppp.Pool(fun=lambda n: f"ogrc {n}!",
                     min_size=0, max_size=5,
                     opener=lambda o: trace("open", o),
                     getter=lambda o: trace("get", o),
                     retter=lambda o: trace("ret", o),
                     closer=lambda o: trace("close", o),
-                    stats=str,
-                    tracer=str)
+                    tracer=lambda o: trace("trace", o),
+                    stats=str)
+
     t1, t2 = pool.get(), pool.get()
     assert isinstance(pool.stats(), dict)
     pool.ret(t1)
     pool.ret(t2)
+    pool.ret(t1)  # multiple return
     pool.shutdown()
 
 
-health_count = 0
 
 def test_health():
 
+    health_count = 0
+
     def health(o):
-        global health_count
+        nonlocal health_count
         health_count += 1
         return health_count % 2 == 1
 
-    pool = ppp.Pool(fun = lambda n: f"health {n}",
-                    health=health,
-                    min_size = 10,
-                    delay=0.4)
+    pool = ppp.Pool(
+        fun=lambda n: f"health {n}",
+        health=health,
+        min_size=10,
+        delay=0.4,
+    )
+
     time.sleep(1.0)  # each hk round should remove half of the objects
     assert pool._ncreated >= 20
     pool.shutdown()

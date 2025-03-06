@@ -9,6 +9,7 @@
 
 - Add convenient `dev` and `clean.dev` make targets.
 - Trace double return objects.
+- Improve tests.
 
 ## 11.2 on 2024-11-17
 
