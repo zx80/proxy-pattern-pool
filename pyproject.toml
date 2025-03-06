@@ -31,7 +31,7 @@ py-modules = [ "ProxyPatternPool" ]
 # NOTE greenlet has strange undeclared dependencies on import, eg "cryptography"
 local = [
   "werkzeug",
-  "eventlet; python_version < '3.13'",
+  "eventlet",
   "gevent; python_version < '3.13'"
 ]
 dev = [ "mypy", "pyright", "flake8", "black", "ruff", "pytest", "coverage", "pymarkdownlnt" ]
