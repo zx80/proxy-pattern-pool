@@ -33,7 +33,8 @@ local = [
   "werkzeug",
   "eventlet; python_version < '3.13'",
   "gevent; python_version < '3.13'",
-  "cryptography"
+  # 2025-03-06: error: failed to run custom build command for cryptography-cffi v0.1.0
+  "cryptography; python_version != '3.13t'"
 ]
 dev = [ "mypy", "pyright", "flake8", "black", "ruff", "pytest", "coverage", "pymarkdownlnt" ]
 pub = [ "build", "wheel", "twine" ]
