@@ -10,11 +10,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.13: gevent is not supported yet
-        # 3.13: greenlet (eventlet?) is not supported yet
-        # 3.13/3.14: TODO trigger nogil tests when available!
-        # 3.13t 2024-11-28: broken rust interface for cryptography-cffi
-        # 3.14t 2024-11-28: not supported
+        # 3.13: gevent is not supported yet?
+        # 3.13: greenlet (eventlet?) is not supported yet?
         python:
         - version: "pypy3.10"
         - version: "3.10"
@@ -24,8 +21,9 @@ jobs:
         - version: "3.13t"
           env: PYTHON_GIL=0
         - version: "3.14"
-        - version: "3.14t"
-          env: PYTHON_GIL=0
+        # FIXME 2025-03-06 coverage issue
+        # - version: "3.14t"
+        #   env: PYTHON_GIL=0
     steps:
     # Setup
     - uses: actions/checkout@v4
