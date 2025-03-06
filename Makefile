@@ -25,7 +25,7 @@ check.pyright: $(VENV)
 	[ "$(VENV)" ] && source $(VENV)/bin/activate
 	pyright $(MODULE).py
 
-IGNORE = E227,E402,E501
+IGNORE = E227,E402,E501,W504
 
 .PHONY: check.ruff
 check.ruff: $(VENV)

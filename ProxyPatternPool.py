@@ -630,9 +630,10 @@ class Pool:
                 # multiple return, killed?
                 # NOTE cannot show object which could be in any state…
                 try:
-                    log.warning(f"unexpected object returned: {self._tracer(obj)}")
+                    trace = self._tracer or str
+                    log.warning(f"unexpected object returned: {trace(obj)}")
                 except Exception as e:
-                    log.error(f"exception in tracer on unexpected returned object")
+                    log.error(f"exception in tracer on unexpected returned object: {e}")
                 return
             if self._max_use and self._uses[obj].uses >= self._max_use:
                 self._nwornout += 1
