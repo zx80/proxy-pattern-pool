@@ -5,6 +5,10 @@
 - remove `gevent` exclusions for Python 3.13 when possible.
 - suspend house keeping thread when nothing to do?
 
+## ? on ?
+
+- Enable _PyPy 3.11_ GitHub CI.
+
 ## 11.3 on 2025-03-06
 
 - Trace double return objects.
