@@ -26,19 +26,19 @@ jobs:
           cover: 100.0
         - version: "3.13t"
           cover: 100.0
-          env: PYTHON_GIL=0
+          gil: 0
         - version: "3.13t"
           cover: 100.0
-          env: PYTHON_GIL=1
+          gil: 1
         # 3.14 including nogil
         - version: "3.14"
           cover: 100.0
         - version: "3.14t"
           cover: 96.5  # FIXME 3.14t coverage issue?!
-          env: PYTHON_GIL=0
+          gil: 0
         - version: "3.14t"
           cover: 96.5  # FIXME 3.14t coverage issue?
-          env: PYTHON_GIL=1
+          gil: 1
     steps:
     # Setup
     - uses: actions/checkout@v4
@@ -63,8 +63,8 @@ jobs:
     - name: Check with ruff
       run: make check.ruff
     - name: Check with pytest
-      run: make check.pytest
+      run: PYTHON_GIL=${{ matrix.python.gil }} make check.pytest
     - name: Check with coverage
-      run: make COVER=${{ matrix.python.cover }} check.coverage
+      run: PYTHON_GIL=${{ matrix.python.gil }} make COVER=${{ matrix.python.cover }} check.coverage
     - name: Check with pymarkdown
       run: make check.pymarkdown
