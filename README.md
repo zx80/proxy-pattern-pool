@@ -186,12 +186,12 @@ Shared.init_app("hello world!")
 
 ## Notes
 
-This module is rhetorical: because of the GIL Python is quite bad as a parallel
-language, so the point of creating threads which will mostly not really run in
-parallel is moot, thus the point of having a clever pool of stuff to be shared
-by these thread is even mooter! However, as the GIL is scheduled to go away
-in the coming years, starting from _Python 3.13_, it might start to make sense
-to have such a thing here!
+This module was initially rhetorical: because of the GIL Python was very bad as
+a parallel language, so the point of creating threads which would mostly not
+really run in parallel was moot, thus the point of having a clever pool of
+stuff to be shared by these thread was even mooter!
+However, as the GIL is scheduled to go away in the coming years, starting from
+_Python 3.13_ (Fall 2024), it is startng to make sense to have such a thing!
 
 In passing, it is interesting to note that the foremost
 [driving motivation](https://peps.python.org/pep-0703/) for getting
@@ -219,7 +219,18 @@ See Also:
 - [Eventlet db_pool](https://eventlet.net/doc/modules/db_pool.html)
   for pooling MySQL or Postgres database connexions.
 - [Discussion](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing)
-  about database pool sizing (spoiler: small is beautiful).
+  about database pool sizing (spoiler: small is beautiful: you want threads
+  waiting for expensive resources used at full capacity rather than
+  many expensive resources under used).
+
+Example of resources to put in a pool: connections to databases, authentication
+services (eg LDAP), search engine…
+
+For a typical REST backend, most requests will require one DB connection, thus
+having an in-process pool with less connections is not very usefull, and more is
+useless as well, so we may only have _#conns == #threads_ which make sense.
+The only point of having a pool is that the thread may be killed independently
+and avoiding recreating connections in such cases.
 
 ## License
 
