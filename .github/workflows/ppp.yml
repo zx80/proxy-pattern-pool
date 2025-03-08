@@ -12,47 +12,59 @@ jobs:
       matrix:
         python:
         - version: "pypy3.10"
+          cover: 100.0
         - version: "pypy3.11"
+          cover: 100.0
         - version: "3.10"
+          cover: 100.0
         - version: "3.11"
+          cover: 100.0
         - version: "3.12"
+          cover: 100.0
+        # 3.13 including nogil
         - version: "3.13"
+          cover: 100.0
         - version: "3.13t"
+          cover: 100.0
           env: PYTHON_GIL=0
         - version: "3.13t"
+          cover: 100.0
           env: PYTHON_GIL=1
+        # 3.14 including nogil
         - version: "3.14"
-        # FIXME 2025-03-06 coverage issue
-        # - version: "3.14t"
-        #   env: PYTHON_GIL=0  # FIXME useful?
+          cover: 100.0
+        - version: "3.14t"
+          cover: 100.0
+          env: PYTHON_GIL=0
+        - version: "3.14t"
+          cover: 100.0
+          env: PYTHON_GIL=1
     steps:
     # Setup
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python.version }}
       # uses: actions/setup-python@v5
+      # FIXME switch to v6 when available
       uses: actions/setup-python@main
-      # FIXME cache: 'pip' # ???
-      # uses: Quansight-Labs/setup-python@v5
       with:
         python-version: ${{ matrix.python.version }}
         allow-prereleases: true
+        cache: "pip"
     # Dependencies
     - name: Install Python Dependencies
-      run: |
-        pip install -U pip
-        pip install -e .[local,dev]
+      run: make dev
     # Checks
     - name: Check with pyright
-      run: make VENV= check.pyright
+      run: make check.pyright
     # - name: Check with black
     #  run: black --check ProxyPatternPool.py
     # - name: Check with flake8
-    #   run: make VENV= check.flake8
+    #   run: make check.flake8
     - name: Check with ruff
-      run: make VENV= check.ruff
+      run: make check.ruff
     - name: Check with pytest
-      run: make VENV= check.pytest
+      run: make check.pytest
     - name: Check with coverage
-      run: make VENV= check.coverage
+      run: make COVER=${{ matrix.python.cover }} check.coverage
     - name: Check with pymarkdown
-      run: make VENV= check.pymarkdown
+      run: make check.pymarkdown

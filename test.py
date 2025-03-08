@@ -11,7 +11,6 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("tests")
 # ppp.log.setLevel(logging.DEBUG)
 
-
 def test_proxy_direct():
     v1, v2 = "hello!", "world!"
     r1 = ppp.Proxy(closer=lambda o: o.close(), log_level=logging.INFO)
@@ -26,7 +25,6 @@ def test_proxy_direct():
     assert r3 == "1" and r3 != "one"
     assert r3.isdigit()
     assert repr("1") == repr(r3)
-
 
 def test_proxy_threads():
     # thread local stuff
@@ -81,7 +79,6 @@ def test_proxy_threads():
     r._set_fun(lambda i: i + 10)
     assert str(r) == "10"
 
-
 def test_proxy_pool_direct():
     ref = ppp.Proxy()
 
@@ -111,7 +108,6 @@ def test_proxy_pool_direct():
     assert len(ref._pool._using) == 0
     assert ref._pool._nobjs == 1
     del ref
-
 
 def test_proxy_pool_threads():
     log.debug("testing with 2 threads")
@@ -153,7 +149,6 @@ def test_proxy_pool_threads():
         assert "timeout after" in str(e)
     del ref
 
-
 def test_pool_direct():
     # test max_use
     pool = ppp.Pool(fun=lambda i: i, max_size=1, max_use=2, tracer=str)
@@ -171,7 +166,6 @@ def test_pool_direct():
     pool.ret(i)
     assert isinstance(pool.stats(), dict)
     pool.__delete__()
-
 
 def test_pool_class():
     # test with close and None
@@ -196,7 +190,6 @@ def test_pool_class():
     pool.ret(t)
     assert isinstance(pool.stats(), dict)
     pool.__delete__()
-
 
 def test_pool_delay():
     # available delay
@@ -236,7 +229,6 @@ def test_pool_delay():
     time.sleep(0.3)  # kill
     assert pool._nobjs == 1
 
-
 def test_with():
     pool = ppp.Pool(fun=lambda n: f"Foo {n}!", min_size=0, max_size=2, log_level=logging.INFO)
     with pool.obj() as o:
@@ -250,7 +242,6 @@ def test_with():
         assert o == "Bla 0!"
     with prox._obj() as o:
         assert o == "Bla 0!"
-
 
 def test_local():
     _scope = ppp.Proxy.Scope
@@ -268,7 +259,6 @@ def test_local():
 
     for scope in scopes:
         p = ppp.Proxy(fun=lambda s: scope, scope=scope)
-
 
 # test opener/getter/retter/closer
 def test_ogrc():
@@ -292,8 +282,6 @@ def test_ogrc():
     pool.ret(t2)
     pool.ret(t1)  # multiple return
     pool.shutdown()
-
-
 
 def test_health():
 
@@ -325,3 +313,26 @@ def test_werkzeug_workaround():
     assert pool._housekeeper is None and pool._ncreated == 0
     pool.shutdown()
     del pool
+
+def test_nogil():
+    """Skip tells that GIL is enabled."""
+
+    try:
+        if sys._is_gil_enabled():
+            pytest.skip("gil is enabled")
+    except AttributeError as e:
+        assert "_is_gil_enabled" in str(e)
+        pytest.skip("nogil not supported")
+
+    assert not sys._is_gil_enabled()
+
+    pool = ppp.Pool(fun = lambda n: f"pool {n}", min_size=1)
+    t1, t2 = pool.get(), pool.get()
+    assert t1 == "pool 0" and t2 == "pool 1"
+    pool.ret(t1)
+    pool.ret(t2)
+    assert isinstance(pool.stats(), dict)
+    pool.shutdown()
+    del pool
+
+    assert not sys._is_gil_enabled()

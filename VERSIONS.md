@@ -8,6 +8,7 @@
 ## ? on ?
 
 - Enable _PyPy 3.11_ GitHub CI.
+- Enable _Python 3.14t_ on GitHubCI, including a coverage issue workaround for now.
 
 ## 11.3 on 2025-03-06
 
