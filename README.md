@@ -50,27 +50,26 @@ This module provides two classes:
 
   It provides numerous hooks to provide callbacks for creation, deletion,
   stats, tracing, health check… which make it ideal to manage any kind
-  of expensive ressources within a process.
+  of expensive resources within a process.
 
   ```python
   import ProxyPatternPool as ppp
 
-  # start a pool with 2 ressources created by "fun"
+  # start a pool with 2 resources created by "fun"
   pool = ppp.Pool(
       fun = lambda n: f"expensive object {n}",
       min_size=2, max_size=2, timeout=0.5,
   )
 
-  # get ressrouces
-  a = pool.get()
-  b = pool.get()  # max_size reached
+  # get resources
+  a = pool.get(); b = pool.get()  # max_size reached
   try:
       c = pool.get()  # will timeout after 0.5 seconds
       assert False
   except ppp.TimeOut:
       pass
 
-  pool.ret(a); pool.ret(b);
+  pool.ret(a); pool.ret(b);  # return resources
 
   pool.shutdown()
   del pool
