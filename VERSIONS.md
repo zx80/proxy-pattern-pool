@@ -8,7 +8,7 @@
 ## 11.4 on 2025-03-08
 
 - Enable _PyPy 3.11_ GitHub CI.
-- Enable _Python 3.14t_ on GitHubCI, including a coverage issue workaround for now.
+- Enable _Python 3.14t_ on GitHub CI, including a coverage issue workaround for now.
 - Add a _nogil_ test.
 - Improve documentation.
 
