@@ -5,10 +5,12 @@
 - remove `gevent` exclusions for Python 3.13 when possible.
 - suspend house keeping thread when nothing to do?
 
-## ? on ?
+## 11.4 on 2025-03-08
 
 - Enable _PyPy 3.11_ GitHub CI.
 - Enable _Python 3.14t_ on GitHubCI, including a coverage issue workaround for now.
+- Add a _nogil_ test.
+- Improve documentation.
 
 ## 11.3 on 2025-03-06
 
