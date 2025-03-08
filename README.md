@@ -38,14 +38,43 @@ This module provides two classes:
   # db is now a proxy to the initialized object
   ```
 
-- `Pool` implements a thread-safe pool of things which can be used to store
-  expensive-to-create objects such as database connections. The above proxy
-  object creates a pool automatically depending on its parameters.
+  When an internal pool is used, method `_ret_obj` **must** be called to return
+  the object to the pool when done with it.
 
-  Method `_ret_obj` **must** be called to return the object to the pool when
-  done with it.
+- `Pool` implements a full-featured thread-safe pool of things which can be used
+  to store expensive-to-create objects such as database connections, to be
+  shared between threads for instance. The above proxy object creates a pool
+  automatically depending on its parameters.
 
   This generic pool class can be used independently of the `Proxy` class.
+
+  It provides numerous hooks to provide callbacks for creation, deletion,
+  stats, tracing, health check… which make it ideal to manage any kind
+  of expensive ressources within a process.
+
+  ```python
+  import ProxyPatternPool as ppp
+
+  # start a pool with 2 ressources created by "fun"
+  pool = ppp.Pool(
+      fun = lambda n: f"expensive object {n}",
+      min_size=2, max_size=2, timeout=0.5,
+  )
+
+  # get ressrouces
+  a = pool.get()
+  b = pool.get()  # max_size reached
+  try:
+      c = pool.get()  # will timeout after 0.5 seconds
+      assert False
+  except ppp.TimeOut:
+      pass
+
+  pool.ret(a); pool.ret(b);
+
+  pool.shutdown()
+  del pool
+  ```
 
 ## Documentation
 
