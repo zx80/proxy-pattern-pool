@@ -39,9 +39,12 @@ jobs:
         - version: "3.14t"
           cover: 96.5  # FIXME 3.14t coverage issue?
           gil: 1
+    env:
+      PYTHON_GIL: ${{ matrix.python.gil }}
     steps:
     # Setup
-    - uses: actions/checkout@v4
+    - name: Checkout Project
+      uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python.version }}
       # uses: actions/setup-python@v5
       # FIXME switch to v6 when available
@@ -63,8 +66,8 @@ jobs:
     - name: Check with ruff
       run: make check.ruff
     - name: Check with pytest
-      run: PYTHON_GIL=${{ matrix.python.gil }} make check.pytest
+      run: make check.pytest
     - name: Check with coverage
-      run: PYTHON_GIL=${{ matrix.python.gil }} make COVER=${{ matrix.python.cover }} check.coverage
+      run: make COVER=${{ matrix.python.cover }} check.coverage
     - name: Check with pymarkdown
       run: make check.pymarkdown
