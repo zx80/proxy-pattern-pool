@@ -35,4 +35,5 @@ local = [
   "gevent; python_version < '3.13'"
 ]
 dev = [ "mypy", "pyright", "flake8", "black", "ruff", "pytest", "coverage", "pymarkdownlnt" ]
+doc = [ "sphinx", "sphinx-rtd-theme", "sphinx-autoapi", "sphinx-lint", "myst_parser" ]
 pub = [ "build", "wheel", "twine" ]

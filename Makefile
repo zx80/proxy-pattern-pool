@@ -61,12 +61,18 @@ check.pymarkdown: dev
 	source venv/bin/activate
 	pymarkdown scan $(F.md)
 
+.PHONY: check.docs
+check.docs: venv/.doc
+	source venv/bin/activate
+	sphinx-lint docs/
+
 # check.black check.pyright
 .PHONY: check
 check: check.pyright check.pymarkdown check.ruff check.pytest check.coverage
 
 .PHONY: clean
 clean:
+	$(MAKE) -C docs clean
 	$(RM) -r __pycache__ */__pycache__ dist build .mypy_cache .pytest_cache .coverage htmlcov .ruff_cache
 	$(RM) $(F.pdf)
 
@@ -89,6 +95,17 @@ venv/.dev: venv
 	source venv/bin/activate
 	pip install -e .[dev,local]
 	touch $@
+
+# documentation
+venv/.doc: venv
+	source venv/bin/activate
+	pip install -e .[doc]
+	touch $@
+
+.PHONY: doc
+doc: venv/.doc check.docs
+	source venv/bin/activate
+	$(MAKE) -C docs html
 
 .PHONY: pub
 pub: venv/.pub

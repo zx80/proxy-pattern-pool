@@ -1,9 +1,10 @@
-# Proxy Pattern Pool Versions
+# ProxyPatternPool Versions
 
-## TODO
+Version history.
 
-- remove `gevent` exclusions for Python 3.13 when possible.
-- suspend house keeping thread when nothing to do?
+## ? on ?
+
+- Switch documentation to Sphinx.
 
 ## 11.4 on 2025-03-08
 
