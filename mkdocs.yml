@@ -2,6 +2,7 @@ site_name: ProxyPatternPool Python Package
 site_url: https://zx80.github.io/proxy-pattern-pool/
 repo_url: https://github.com/zx80/proxy-pattern-pool
 site_dir: _site
+copyright: 2022-2025 Fabien Coelho
 
 theme:
   name: material
