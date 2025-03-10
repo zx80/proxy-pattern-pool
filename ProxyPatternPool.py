@@ -89,31 +89,31 @@ class Pool:
     Miscellaneous parameters:
 
     - timeout: give-up waiting after this time, None for no timeout.
-      this is only used when running with a bounded-size pool (``max_size``).
+      this is only used when running with a bounded-size pool (`max_size`).
     - log_level: set logging level for local logger.
 
     The object life cycle is the following, with the corresponding hooks:
 
-    - objects are created by calling ``fun``, after which ``opener`` is called.
-    - when an object is extracted from the pool, ``getter`` is called.
-    - when an object is returned to the pool, ``retter` is called.
-    - when an object is _borrowed_ for checking health, ``health`` is called.
-    - when an object is removed from the pool, ``closer`` is called.
+    - objects are created by calling `fun`, after which `opener` is called.
+    - when an object is extracted from the pool, `getter` is called.
+    - when an object is returned to the pool, `retter` is called.
+    - when an object is _borrowed_ for checking health, `health` is called.
+    - when an object is removed from the pool, `closer` is called.
 
     Objects are created:
 
-    - when the number of available object is below ``min_size`` for some reason.
+    - when the number of available object is below `min_size` for some reason.
     - when an object is requested, none is available, and the number of objects
-      is below ``max_size``.
+      is below `max_size`.
 
     Objects are destroyed:
 
-    - when ``health`` returns *False* on an house keeper round.
-    - when they are unused for too long (``max_avail_delay``) and if the number
-      of objects is strictly over ``min_size``.
-    - when they are being used for too long (over ``max_using_delay_kill``).
-    - when they reach the number of uses limit (``max_use``).
-    - when ``__delete__`` or ``shutdown`` is called.
+    - when `health` returns *False* on an house keeper round.
+    - when they are unused for too long (`max_avail_delay`) and if the number
+      of objects is strictly over `min_size`.
+    - when they are being used for too long (over `max_using_delay_kill`).
+    - when they reach the number of uses limit (`max_use`).
+    - when `__delete__` or `shutdown` is called.
 
     Environment:
 
@@ -331,7 +331,7 @@ class Pool:
     def _hkRound(self):
         """Housekeeping round, under lock.
 
-        Objects that are scheduled for destruction are moved to ``self._todel``
+        Objects that are scheduled for destruction are moved to `self._todel`
         so as to minimize the time passed here.
         """
         self._hk_rounds += 1
