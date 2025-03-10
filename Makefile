@@ -5,7 +5,7 @@ SHELL	= /bin/bash
 
 MODULE	= ProxyPatternPool
 
-F.md	= $(wildcard *.md)
+F.md	= $(wildcard *.md docs/*.md)
 F.pdf	= $(F.md:%.md=%.pdf)
 
 # PYTHON	= /snap/bin/pypy3
@@ -62,9 +62,7 @@ check.pymarkdown: dev
 	pymarkdown scan $(F.md)
 
 .PHONY: check.docs
-check.docs: venv/.doc
-	source venv/bin/activate
-	sphinx-lint docs/
+check.docs: check.pymarkdown
 
 # check.black check.pyright
 .PHONY: check
@@ -73,7 +71,7 @@ check: check.pyright check.pymarkdown check.ruff check.pytest check.coverage
 .PHONY: clean
 clean:
 	$(MAKE) -C docs clean
-	$(RM) -r __pycache__ */__pycache__ dist build .mypy_cache .pytest_cache .coverage htmlcov .ruff_cache
+	$(RM) -r __pycache__ */__pycache__ dist build .mypy_cache .pytest_cache .coverage htmlcov .ruff_cache _site/
 	$(RM) $(F.pdf)
 
 .PHONY: clean.venv
@@ -105,7 +103,7 @@ venv/.doc: venv
 .PHONY: doc
 doc: venv/.doc check.docs
 	source venv/bin/activate
-	$(MAKE) -C docs html
+	mkdocs build
 
 .PHONY: pub
 pub: venv/.pub

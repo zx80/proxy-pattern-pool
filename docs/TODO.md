@@ -1,4 +1,4 @@
-## ProxyPatternPool Backlog
+# ProxyPatternPool Backlog
 
 - remove `gevent` exclusions for Python 3.13 when possible.
 - suspend house keeping thread when nothing to do?

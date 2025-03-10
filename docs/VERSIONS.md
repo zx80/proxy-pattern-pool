@@ -4,7 +4,7 @@ Version history.
 
 ## ? on ?
 
-- Switch documentation to Sphinx.
+- Switch documentation to Mkdocs.
 
 ## 11.4 on 2025-03-08
 
