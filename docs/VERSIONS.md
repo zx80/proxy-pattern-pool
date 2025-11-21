@@ -6,6 +6,7 @@ Version history.
 
 - Switch documentation to Mkdocs.
 - use SPDX licensing format.
+- Update GitHub CI versions.
 
 ## 11.4 on 2025-03-08
 
