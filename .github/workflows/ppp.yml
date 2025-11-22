@@ -34,10 +34,10 @@ jobs:
         - version: "3.14"
           cover: 100.0
         - version: "3.14t"
-          cover: 96.5  # FIXME 3.14t coverage issue?!
+          cover: 100.0
           gil: 0
         - version: "3.14t"
-          cover: 96.5  # FIXME 3.14t coverage issue?
+          cover: 100.0
           gil: 1
     env:
       PYTHON_GIL: ${{ matrix.python.gil }}
