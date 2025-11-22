@@ -2,7 +2,7 @@
 
 Version history.
 
-## ? on ?
+## 11.5 on 2025-11-22
 
 - Switch documentation to Mkdocs.
 - use SPDX licensing format.
