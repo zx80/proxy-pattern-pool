@@ -1,9 +1,9 @@
 # Discussion
 
 The `ProxyPatternPool` module was initially rhetorical: because of the GIL
-Python was very bad as a parallel language, so the point of creating threads
-which would mostly not really run in parallel was moot, thus the point of having
-a clever pool of stuff to be shared by these thread was even mooter!
+Python was very bad as a parallel language.
+The point of creating threads which would mostly not really run in parallel was moot.
+Having a clever pool of stuff to be shared by these thread was even mooter!
 However, as the GIL is scheduled to go away in the coming years, starting from
 _Python 3.13_ (Fall 2024), it is starting to make sense to have such a thing!
 
@@ -12,8 +12,8 @@ In passing, it is interesting to note that the foremost
 read of the GIL is… _data science_. This tells something.
 In the past, people interested in parallelism, i.e. performance, say myself,
 would probably just turn away from this quite slow language.
-People from the networking www world would be satisfied with the adhoc
-asynchronous model, and/or just create many processes because
+People from the www world would be satisfied with the adhoc asynchronous model
+despite its source code impact, and/or just create many processes because
 in this context the need to communicate between active workers is limited.
 Now come the data scientist, who is not that interested in programming, is
 happy with Python and its ecosystem, in particular with the various ML libraries
@@ -41,7 +41,7 @@ Example of resources to put in a pool: connections to databases, authentication
 services (eg LDAP), search engine…
 
 For a typical REST backend, most requests will require one DB connection, thus
-having an in-process pool with less connections is not very usefull, and more is
+having an in-process pool with less connections is not very usefull. More is
 useless as well, so we may only have _#conns == #threads_ which make sense.
 The only point of having a pool is that the thread may be killed independently
-and avoiding recreating connections in such cases.
+and to avoid recreating connections in such cases.
