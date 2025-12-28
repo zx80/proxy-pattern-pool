@@ -83,7 +83,7 @@ class Pool:
     - retter: hook called on object pool return.
     - closer: hook called on object destruction.
     - stats: hook called to generate per-object JSON-compatible stats.
-    - tracer: hook called to generate debug information on an object.
+    - tracer: hook called to generate debug information on an object, default is "str".
     - health: hook called to check for an available object health.
 
     Miscellaneous parameters:
@@ -167,7 +167,7 @@ class Pool:
         if log_level is not None:
             log.setLevel(log_level)
         self._debug = (log.getEffectiveLevel() == logging.DEBUG)
-        self._tracer = tracer
+        self._tracer = tracer or str
         self._started = datetime.datetime.now()
         self._started_ts = datetime.datetime.timestamp(self._started)
         # objects
@@ -259,10 +259,8 @@ class Pool:
         data = {}
         if self._stats:  # with stat hook
             data["stats"] = self._stats(obj)
-        elif self._tracer:  # with tracer hook
+        else:  # with tracer hook
             data["trace"] = self._tracer(obj)
-        else:  # with string
-            data["str"] = str(obj)
         # also add with usage data if available
         if obj in self._uses:
             suo = self._uses[obj]
@@ -379,8 +377,6 @@ class Pool:
         with self._lock:
             objs = list(self._avail)
 
-        tracer = self._tracer or str
-
         # not under lock so a stuck health check won't freeze the pool
         for obj in objs:
             if self._borrow(obj):
@@ -394,7 +390,7 @@ class Pool:
                 finally:
                     self._return(obj)
                 if not healthy:
-                    log.error(f"bad health: {tracer(obj)}")
+                    log.error(f"bad health: {self._tracer(obj)}")
                     self._bad_health += 1
                     self._out(obj)
                     self._todel.add(obj)  # unhealthy objects are just removed
@@ -509,6 +505,7 @@ class Pool:
         """Create a new available object."""
         # this may fail
         obj = self._create()
+        _ = self._debug and log.debug(f"open {self._tracer(obj)}")
         # on success, the object is availble
         if self._opener:
             try:
@@ -530,14 +527,17 @@ class Pool:
                 seen = True
                 self._avail.remove(obj)
             if obj in self._using:  # pragma: no cover
+                # this should not happen…
                 seen = True
                 self._using.remove(obj)
             if seen:
                 self._nobjs -= 1
-            # else possible double removal?
+            else:  # possible double removal?
+                log.warning(f"not found in pool: {self._tracer(obj)}")  # pragma: no cover
 
     def _destroy(self, obj):
         """Destroy an object."""
+        _ = self._debug and log.debug(f"close {self._tracer(obj)}")
         if self._closer:
             try:
                 self._closer(obj)
@@ -568,6 +568,7 @@ class Pool:
                 self._avail.remove(obj)
                 self._using.add(obj)
                 self._nborrows += 1
+                _ = self._debug and log.debug(f"borrow {self._tracer(obj)}")
                 return obj
             # else we failed to borrow it, so release semaphore!
             if self._sem:  # pragma: no cover
@@ -578,6 +579,7 @@ class Pool:
     def _return(self, obj):
         """Return borrowed object."""
         with self._lock:
+            _ = self._debug and log.debug(f"return {self._tracer(obj)}")
             assert obj in self._using
             self._using.remove(obj)
             self._avail.add(obj)
@@ -611,6 +613,7 @@ class Pool:
             self._nuses += 1
             self._uses[obj].uses += 1
             self._uses[obj].last_get = self._now()
+        _ = self._debug and log.debug(f"get {self._tracer(obj)}")
         if self._getter:
             try:
                 self._getter(obj)
@@ -620,6 +623,7 @@ class Pool:
 
     def ret(self, obj):
         """Return object to pool."""
+        _ = self._debug and log.debug(f"ret {self._tracer(obj)}")
         if self._retter:
             try:
                 self._retter(obj)
@@ -630,8 +634,7 @@ class Pool:
                 # multiple return, killed?
                 # NOTE cannot show object which could be in any state…
                 try:
-                    trace = self._tracer or str
-                    log.warning(f"unexpected object returned: {trace(obj)}")
+                    log.warning(f"unexpected object returned: {self._tracer(obj)}")
                 except Exception as e:
                     log.error(f"exception in tracer on unexpected returned object: {e}")
                 return

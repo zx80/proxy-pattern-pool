@@ -2,6 +2,10 @@
 
 Version history.
 
+## 11.6 on 2025-12-28
+
+- Improve tracing of operations under debug.
+
 ## 11.5 on 2025-11-22
 
 - Switch documentation to Mkdocs.
