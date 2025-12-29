@@ -70,7 +70,6 @@ check: check.pyright check.pymarkdown check.ruff check.pytest check.coverage
 
 .PHONY: clean
 clean:
-	$(MAKE) -C docs clean
 	$(RM) -r __pycache__ */__pycache__ dist build .mypy_cache .pytest_cache .coverage htmlcov .ruff_cache _site/
 	$(RM) $(F.pdf)
 
