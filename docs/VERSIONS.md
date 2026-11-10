@@ -5,6 +5,7 @@ Version history.
 ## 11.7 on 2026-??-??
 
 - Enable _Python 3.15_, remove _Python 3.10_ and _Pypy 3.10_ GitHub CI tests.
+- Update GitHub CI action versions.
 
 ## 11.6 on 2025-12-28
 
