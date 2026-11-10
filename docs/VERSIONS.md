@@ -6,6 +6,7 @@ Version history.
 
 - Enable _Python 3.15_, remove _Python 3.10_ and _Pypy 3.10_ GitHub CI tests.
 - Update GitHub CI action versions.
+- Minor fixes for `ruff`, reinstate `flake8` check in CI.
 
 ## 11.6 on 2025-12-28
 
@@ -14,7 +15,7 @@ Version history.
 ## 11.5 on 2025-11-22
 
 - Switch documentation to Mkdocs.
-- use SPDX licensing format.
+- Use SPDX licensing format.
 - Update GitHub CI versions.
 
 ## 11.4 on 2025-03-08
