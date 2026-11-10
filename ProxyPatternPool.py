@@ -8,7 +8,8 @@ This code is public domain.
 # pyright: reportAttributeAccessIssue=false
 
 import os
-from typing import Callable, Any
+from typing import Any
+from collections.abc import Callable
 from enum import Enum
 from dataclasses import dataclass
 from contextlib import contextmanager
@@ -680,7 +681,7 @@ class Proxy:
     The generation function is called on demand in each thread automatically.
     """
 
-    class Local(object):
+    class Local:
         """Dumb storage class for shared scope."""
         # FIXME coverage issue with Python 3.14
         obj: Any  # pragma: no cover
@@ -697,7 +698,7 @@ class Proxy:
         SHARED = 1
         THREAD = 2
         VERSATILE = 3
-        WERKZEUG = 3
+        WERKZEUG = 3  # duplication is intentional
         GEVENT = 4
         EVENTLET = 5
 

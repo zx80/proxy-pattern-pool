@@ -36,3 +36,7 @@ local = [
 dev = [ "mypy", "pyright", "flake8", "black", "ruff", "pytest", "coverage", "pymarkdownlnt" ]
 doc = [ "mkdocs", "mkdocs-material", "mkdocstrings[python]" ]
 pub = [ "build", "wheel", "twine" ]
+
+[tool.ruff.lint]
+# ruff rules are what they are, but they are not always right
+ignore = ["BLE001", "B006", "I001", "PIE790", "PIE796"]
