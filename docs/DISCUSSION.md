@@ -21,7 +21,7 @@ and the commodity of web-centric remote interfaces such as Jupyter. When
 confronted with a GIL-induced performance issue, they are more interested at
 fixing the problem than having to learn another language and port their stuff.
 
-Shared object *must* be returned to the pool to avoid depleting resources.
+Shared object _must_ be returned to the pool to avoid depleting resources.
 This may require some active cooperation from the infrastructure which may
 or may not be reliable. Consider monitoring your resources to detect unexpected
 status, eg database connections remaining  _idle in transaction_ and the like.

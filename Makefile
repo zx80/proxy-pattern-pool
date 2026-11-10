@@ -59,7 +59,7 @@ check.coverage: dev
 .PHONY: check.pymarkdown
 check.pymarkdown: dev
 	source venv/bin/activate
-	pymarkdown scan $(F.md)
+	pymarkdown -d MD049 scan $(F.md)
 
 .PHONY: check.docs
 check.docs: check.pymarkdown

@@ -4,9 +4,9 @@ Version history.
 
 ## 11.7 on 2026-??-??
 
-- Enable _Python 3.15_, remove _Python 3.10_ and _Pypy 3.10_ GitHub CI tests.
+- Enable Python _3.15_, remove Python _3.10_ and Pypy _3.10_ GitHub CI tests.
 - Update GitHub CI action versions.
-- Minor fixes for `ruff`, reinstate `flake8` check in CI.
+- Minor fixes for `ruff` and `pymarkdown`, reinstate `flake8` check in CI.
 
 ## 11.6 on 2025-12-28
 
@@ -20,28 +20,28 @@ Version history.
 
 ## 11.4 on 2025-03-08
 
-- Enable _PyPy 3.11_ GitHub CI.
-- Enable _Python 3.14t_ on GitHub CI, including a coverage issue workaround for now.
+- Enable PyPy _3.11_ GitHub CI.
+- Enable Python _3.14t_ on GitHub CI, including a coverage issue workaround for now.
 - Add a _nogil_ test.
 - Improve documentation.
 
 ## 11.3 on 2025-03-06
 
 - Trace double return objects.
-- Enable _Python 3.13t_ CI with and without GIL.
+- Enable Python _3.13t_ CI with and without GIL.
 - Improve tests.
 - Add convenient `dev` and `clean.dev` make targets.
 
 ## 11.2 on 2024-11-17
 
-- Enable _Python 3.14_ CI.
+- Enable Python _3.14_ CI.
 - Improve documentation.
 - Improve `yield` pattern.
 
 ## 11.1 on 2024-08-03
 
 - Use `ProxyException` instead of `Exception` in one place.
-- Activate _Pypy 3.10_ and _Python 3.13_ on GitHub CI.
+- Activate Pypy _3.10_ and Python _3.13_ on GitHub CI.
 
 ## 11.0 on 2024-08-02
 
@@ -173,7 +173,7 @@ Version history.
 ## 5.0 on 2023-06-16
 
 - Use `pyproject.toml` only.
-- Require Python *3.10* for simpler code.
+- Require Python _3.10_ for simpler code.
 
 ## 4.0 on 2023-02-05
 
@@ -197,7 +197,7 @@ Version history.
 ## 1.1 on 2022-11-12
 
 - Minor fixes for `mypy`.
-- Test with Python *3.12*.
+- Test with Python _3.12_.
 - Improved documentation.
 
 ## 1.0 on 2022-10-29

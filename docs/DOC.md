@@ -31,11 +31,11 @@ The `Proxy` constructors expects the following parameters:
   the proxied methods, if necessary.
   It is used as a prefix to have `set_obj` and `set_fun` functions
   which allow to reset the internal `obj` or `fun`.
-- `log_level` set logging level, default *None* means no setting.
+- `log_level` set logging level, default _None_ means no setting.
 - `max_size` of pool, default _None_ means **no** pooling.
 - `max_size` and _all_ other parameters are forwarded to `Pool`.
 
-When `max_size` is not *None*, a `Pool` is created to store the created
+When `max_size` is not _None_, a `Pool` is created to store the created
 objects so as to reuse them. It is the responsability of the user to
 return the object when not needed anymore by calling `_ret_obj` explicitely.
 This is useful for code which keeps creating new threads, eg `werkzeug`.
@@ -60,14 +60,14 @@ Its constructor expects the following parameters:
 - `max_using_delay_kill` when to kill objects kept for a long time.
 - `health_freq` run health check this every house keeper rounds.
 - `hk_delay` force house keeping delay.
-- `log_level` set logging level, default *None* means no setting.
-- `opener` function to call when creating an object, default *None* means no call.
-- `getter` function to call when getting an object, default *None* means no call.
-- `retter` function to call when returning an object, default *None* means no call.
-- `closer` function to call when discarding an object, default *None* means no call.
+- `log_level` set logging level, default _None_ means no setting.
+- `opener` function to call when creating an object, default _None_ means no call.
+- `getter` function to call when getting an object, default _None_ means no call.
+- `retter` function to call when returning an object, default _None_ means no call.
+- `closer` function to call when discarding an object, default _None_ means no call.
 - `stats` function to call to generate a JSON-compatible structure for stats.
 - `health` function to call to check for an available object health.
-- `tracer` object debug helper, default *None* means less debug.
+- `tracer` object debug helper, default _None_ means less debug.
 
 Objects are created on demand by calling `fun` when needed.
 
